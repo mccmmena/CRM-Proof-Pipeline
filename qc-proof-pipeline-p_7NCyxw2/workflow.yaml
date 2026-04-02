@@ -1,0 +1,89 @@
+schema: workflow/2022.04
+name: Pipeline
+settings:
+  error_notification: true
+  network: net_5Lnie3
+triggers:
+- id: hi_PrHwQyG
+steps:
+- namespace: calc_one_hour_before_send
+  runtime: nodejs20.x
+  uses: "./calc_one_hour_before_send/entry.js"
+  props:
+    targetTime: "{{steps.trigger.event.body.next_send_time}}"
+    timezone: America/New_York
+- namespace: workflow_delay
+  runtime: nodejs20.x
+  uses: delay-workflow-delay@0.0.2
+  props:
+    delayDurationValue: "{{steps.calc_one_hour_before_send.$return_value}}"
+    delayDurationUnit: Minutes
+- namespace: utils_rebuild_braze_message
+  runtime: nodejs20.x
+  uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
+  props:
+    app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
+    scheduledItem: "{{steps.trigger.event.body}}"
+    subject: "{{steps.trigger.event.body.name}}_{{steps.trigger.context.id}}"
+- namespace: braze_message_send
+  runtime: nodejs20.x
+  uses: "@mcclatchy/braze-message-send@0.0.6"
+  props:
+    messages: "{{steps.utils_rebuild_braze_message.$return_value.email}}"
+    external_user_ids:
+    - 857377f082c49017236f8329b96c058ca64c80348699c0a0fde7765e76414da0
+    - bedc20a4cb62391c5469ce0158c82770102ef06be5426b1eefef0dce13bc4193
+- namespace: wait_10_minutes
+  runtime: nodejs20.x
+  uses: delay-workflow-delay@0.0.2
+  props:
+    delay:
+    delayDurationValue: 10
+    delayDurationUnit: Minutes
+- namespace: eoa_find_test_by_subject
+  runtime: nodejs20.x
+  uses: "./eoa_find_test_by_subject/entry.js"
+  props:
+    subject: "{{steps.utils_rebuild_braze_message.$return_value.email.subject}}"
+- namespace: eoa_get_screenshot
+  runtime: nodejs20.x
+  uses: "./eoa_get_screenshot/entry.js"
+  props:
+    testId: "{{steps.eoa_find_test_by_subject.$return_value.testId}}"
+- namespace: upload_multiple_screenshots_to_drive
+  runtime: nodejs20.x
+  uses: "./upload_multiple_screenshots_to_drive/entry.js"
+  props:
+    screenshots: "{{steps.eoa_get_screenshot.$return_value.screenshots}}"
+    nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
+    messageName: "{{steps.trigger.event.body.name}}"
+- namespace: filter
+  runtime: nodejs20.x
+  uses: "./filter/entry.js"
+  props:
+    _filter:
+      continue: 'true'
+      rules:
+        t: and
+        r:
+        - a: "{{JSON.stringify(steps.trigger.event.body.tags)}}"
+          op: str/
+          b: Proof/Slack
+        - a: "{{[0, 6].includes(new Date(steps.trigger.context.ts).getDay())}}"
+          op: 'false'
+          b: 'false'
+- namespace: send_message
+  disabled: true
+  runtime: nodejs20.x
+  uses: slack_v2-send-message@0.1.0
+  props:
+    text: "Proof for *{{steps.trigger.event.body.name}}* \n_Sends at {{new Date(steps.trigger.event.body.next_send_time).toLocaleTimeString(\"en-US\",
+      { hour: \"numeric\", minute: \"2-digit\", timeZone: \"UTC\" }) + \" EST\"}}_"
+    mrkdwn: true
+    as_user: false
+    addToChannel: true
+    include_sent_via_pipedream_flag: false
+    thread_broadcast: true
+    unfurl_links: false
+    unfurl_media: false
+
