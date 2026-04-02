@@ -23,6 +23,8 @@ steps:
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
   props:
+    braze:
+      authProvisionId: apn_1Khpe1W
     app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
     scheduledItem: "{{steps.trigger.event.body}}"
     subject: "{{steps.trigger.event.body.name}}_{{steps.trigger.context.id}}"
@@ -30,6 +32,8 @@ steps:
   runtime: nodejs20.x
   uses: "@mcclatchy/braze-message-send@0.0.6"
   props:
+    braze:
+      authProvisionId: apn_0WhgpWJ
     messages: "{{steps.utils_rebuild_braze_message.$return_value.email}}"
     external_user_ids:
     - 857377f082c49017236f8329b96c058ca64c80348699c0a0fde7765e76414da0
@@ -45,16 +49,22 @@ steps:
   runtime: nodejs20.x
   uses: "./eoa_find_test_by_subject/entry.js"
   props:
+    email_on_acid:
+      authProvisionId: apn_b6hZOVx
     subject: "{{steps.utils_rebuild_braze_message.$return_value.email.subject}}"
 - namespace: eoa_get_screenshot
   runtime: nodejs20.x
   uses: "./eoa_get_screenshot/entry.js"
   props:
+    email_on_acid:
+      authProvisionId: apn_b6hZOVx
     testId: "{{steps.eoa_find_test_by_subject.$return_value.testId}}"
 - namespace: upload_multiple_screenshots_to_drive
   runtime: nodejs20.x
   uses: "./upload_multiple_screenshots_to_drive/entry.js"
   props:
+    google_drive:
+      authProvisionId: apn_mnh5B9x
     screenshots: "{{steps.eoa_get_screenshot.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
     messageName: "{{steps.trigger.event.body.name}}"
