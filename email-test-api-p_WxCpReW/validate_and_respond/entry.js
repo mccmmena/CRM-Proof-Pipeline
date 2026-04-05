@@ -10,13 +10,6 @@ const DEFAULTS = {
 };
 
 export default defineComponent({
-  name: "Validate and Respond",
-  version: "0.0.2",
-  key: "validate-and-respond",
-  description:
-    "Validates the incoming request, applies defaults, builds the Braze payload, and immediately responds 202 to free the HTTP caller.",
-  type: "action",
-  props: {},
   async run({ steps, $ }) {
     const body = steps.trigger.event.body;
 

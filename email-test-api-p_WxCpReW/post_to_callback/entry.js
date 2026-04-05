@@ -1,13 +1,6 @@
 import { axios } from "@pipedream/platform";
 
 export default defineComponent({
-  name: "Post Results to Callback",
-  version: "0.0.2",
-  key: "post-to-callback",
-  description:
-    "POSTs the Email on Acid results (screenshots, analysis) to the caller's callback URL.",
-  type: "action",
-  props: {},
   async run({ steps, $ }) {
     const callback_url = steps.validate_and_respond.$return_value.callback_url;
     const subject = steps.validate_and_respond.$return_value.subject;
