@@ -44,24 +44,3 @@ steps:
   props:
     snowflake:
       authProvisionId: apn_yghdQYJ
-- namespace: seed_decision_state
-  runtime: nodejs20.x
-  uses: "./seed_decision_state/entry.js"
-- namespace: wait_until_cutoff
-  runtime: nodejs20.x
-  uses: "./wait_until_cutoff/entry.js"
-- namespace: wait_delay
-  runtime: nodejs20.x
-  uses: delay-workflow-delay@0.0.2
-  props:
-    delayDurationValue: "{{steps.wait_until_cutoff.$return_value}}"
-    delayDurationUnit: Minutes
-- namespace: finalize_decision
-  runtime: nodejs20.x
-  uses: "./finalize_decision/entry.js"
-  props:
-    braze:
-      authProvisionId: apn_6LhOGA9
-    snowflake:
-      authProvisionId: apn_yghdQYJ
-

@@ -1,8 +1,6 @@
 import { axios } from "@pipedream/platform";
 
 export default defineComponent({
-  // VERIFICATION TEST: does type:"action" block access to `steps`?
-  type: "action",
   props: {
     email_on_acid: {
       type: "app",

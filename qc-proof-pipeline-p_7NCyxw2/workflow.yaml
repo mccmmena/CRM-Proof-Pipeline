@@ -87,10 +87,14 @@ steps:
   disabled: true
   runtime: nodejs20.x
   uses: "./lookup_newsletter_run/entry.js"
-- namespace: post_approval_message
+- namespace: post_and_suspend
   disabled: true
   runtime: nodejs20.x
-  uses: "./post_approval_message/entry.js"
+  uses: "./post_and_suspend/entry.js"
+- namespace: apply_decision
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./apply_decision/entry.js"
 - namespace: send_message
   disabled: true
   runtime: nodejs20.x
