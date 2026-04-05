@@ -15,50 +15,63 @@ export default defineComponent({
       `${this.email_on_acid.$auth.api_key}:${this.email_on_acid.$auth.account_password}`
     ).toString("base64");
 
-    const maxAttempts = 10;
-    const pollDelayMs = 30000;
+    const response = await axios($, {
+      method: "GET",
+      url: `https://api.emailonacid.com/v5/email/tests/${testId}/results`,
+      headers: { Authorization: `Basic ${auth}` },
+    });
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const response = await axios($, {
-        method: "GET",
-        url: `https://api.emailonacid.com/v5/email/tests/${testId}/results`,
-        headers: { Authorization: `Basic ${auth}` },
-      });
+    const entries = Object.entries(response || {});
+    const total = entries.length;
+    const complete = entries.filter(
+      ([, data]) => data.status === "Complete"
+    ).length;
+    const failed = entries.filter(
+      ([, data]) => data.status === "Failed" || data.status === "Error"
+    ).length;
+    const pending = total - complete - failed;
 
-      const entries = Object.entries(response || {});
-      const hasScreenshots = entries.some(
-        ([, data]) => data.screenshots?.default || data.url
+    const runs = $.context.run.runs;
+    const maxRuns = 30; // 30 × 30s = 15 min of polling
+    const allDone = pending === 0 && total > 0;
+
+    if (!allDone && runs < maxRuns) {
+      console.log(
+        `Attempt ${runs}/${maxRuns}: ${complete}/${total} complete, ${pending} pending. Re-running in 30s...`
       );
-
-      if (hasScreenshots) {
-        const isFiltering = clients && clients.length > 0;
-
-        const screenshots = entries
-          .filter(([client]) => !isFiltering || clients.includes(client))
-          .map(([client, data]) => ({
-            client,
-            url: data.screenshots?.default || data.url,
-          }))
-          .filter((s) => s.url);
-
-        $.export(
-          "$summary",
-          `Retrieved ${screenshots.length} screenshots on attempt ${attempt}`
-        );
-
-        return { testId, screenshots, fullResults: response };
-      }
-
-      if (attempt < maxAttempts) {
-        console.log(
-          `Attempt ${attempt}: Screenshots not ready. Retrying in ${pollDelayMs / 1000}s...`
-        );
-        await new Promise((resolve) => setTimeout(resolve, pollDelayMs));
-      }
+      $.flow.rerun(30000, null, maxRuns);
+      return;
     }
 
-    throw new Error(
-      `EOA test ${testId} did not produce screenshots after ${maxAttempts} attempts`
+    if (!allDone) {
+      console.warn(
+        `Timeout after ${runs} attempts. Returning ${complete}/${total} complete results.`
+      );
+    }
+
+    const isFiltering = clients && clients.length > 0;
+    const screenshots = entries
+      .filter(([client]) => !isFiltering || clients.includes(client))
+      .filter(([, data]) => data.status === "Complete")
+      .map(([client, data]) => ({
+        client,
+        url: data.screenshots?.default || data.url,
+      }))
+      .filter((s) => s.url);
+
+    $.export(
+      "$summary",
+      allDone
+        ? `All complete: ${screenshots.length} screenshots`
+        : `Timeout: ${screenshots.length}/${total} screenshots (${failed} failed)`
     );
+
+    return {
+      testId,
+      screenshots,
+      fullResults: response,
+      status: allDone ? "complete" : "timeout",
+      stats: { total, complete, failed, pending },
+    };
   },
 });
