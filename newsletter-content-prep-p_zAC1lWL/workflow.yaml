@@ -4,4 +4,40 @@ settings:
   error_notification: true
 triggers:
 - id: hi_ERHJ2eB
-
+steps:
+- namespace: load_config
+  runtime: nodejs20.x
+  uses: "./load_config/entry.js"
+- namespace: fetch_feed
+  runtime: nodejs20.x
+  uses: "./fetch_feed/entry.js"
+- namespace: write_run_history
+  runtime: nodejs20.x
+  uses: "./write_run_history/entry.js"
+- namespace: upsert_slot_rows
+  runtime: nodejs20.x
+  uses: "./upsert_slot_rows/entry.js"
+- namespace: generate_ai_content
+  runtime: nodejs20.x
+  uses: "./generate_ai_content/entry.js"
+- namespace: upsert_meta_row
+  runtime: nodejs20.x
+  uses: "./upsert_meta_row/entry.js"
+- namespace: write_ai_to_history
+  runtime: nodejs20.x
+  uses: "./write_ai_to_history/entry.js"
+- namespace: seed_decision_state
+  runtime: nodejs20.x
+  uses: "./seed_decision_state/entry.js"
+- namespace: wait_until_cutoff
+  runtime: nodejs20.x
+  uses: "./wait_until_cutoff/entry.js"
+- namespace: wait_delay
+  runtime: nodejs20.x
+  uses: delay-workflow-delay@0.0.2
+  props:
+    delayDurationValue: "{{steps.wait_until_cutoff.$return_value}}"
+    delayDurationUnit: Minutes
+- namespace: finalize_decision
+  runtime: nodejs20.x
+  uses: "./finalize_decision/entry.js"

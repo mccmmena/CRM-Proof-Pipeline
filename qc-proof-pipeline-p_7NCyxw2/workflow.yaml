@@ -83,6 +83,14 @@ steps:
         - a: "{{[0, 6].includes(new Date(steps.trigger.context.ts).getDay())}}"
           op: 'false'
           b: 'false'
+- namespace: lookup_newsletter_run
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./lookup_newsletter_run/entry.js"
+- namespace: post_approval_message
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./post_approval_message/entry.js"
 - namespace: send_message
   disabled: true
   runtime: nodejs20.x

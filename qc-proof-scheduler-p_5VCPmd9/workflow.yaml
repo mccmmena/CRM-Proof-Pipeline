@@ -20,6 +20,10 @@ steps:
   props:
     items: "{{steps.utils_filter_by_tags.$return_value}}"
     workflowUrl: https://eou1vpj5be9iob8.m.pipedream.net
+- namespace: route_and_trigger
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./route_and_trigger/entry.js"
 - namespace: create_folder
   disabled: true
   runtime: nodejs20.x

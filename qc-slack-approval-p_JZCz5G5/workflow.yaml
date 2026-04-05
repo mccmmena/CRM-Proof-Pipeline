@@ -65,4 +65,35 @@ steps:
     thread_ts: "{{steps.trigger.event.event_ts}}"
     unfurl_links: false
     unfurl_media: false
+# Interactivity handler steps — disabled until trigger is changed from
+# Slack message event to HTTP (for Slack Interactivity Request URL) in UI.
+# Once trigger is HTTP, remove the old steps above and enable these.
+- namespace: verify_signature
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./verify_signature/entry.js"
+- namespace: ack
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./ack/entry.js"
+- namespace: parse_payload
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./parse_payload/entry.js"
+- namespace: authorize_user
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./authorize_user/entry.js"
+- namespace: write_decision
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./write_decision/entry.js"
+- namespace: apply_rejection
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./apply_rejection/entry.js"
+- namespace: update_slack_message
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./update_slack_message/entry.js"
 
