@@ -1,0 +1,7 @@
+schema: workflow/2022.04
+name: Braze Email Capture
+settings:
+  error_notification: true
+triggers:
+- id: ei_0bT1R4
+
