@@ -20,14 +20,18 @@ export default defineComponent({
       email?.headers?.subject ||
       "";
 
-    const rendered_html =
-      email.html ||
-      email.body_html ||
-      email.htmlBody ||
-      email.text ||
-      email.body_text ||
-      email.textBody ||
-      "";
+    // Pipedream email trigger exposes parsed body at email.body
+    // It may be a string (HTML/text) or an object with html/text fields
+    let rendered_html = "";
+    if (typeof email.body === "string") {
+      rendered_html = email.body;
+    } else if (email.body && typeof email.body === "object") {
+      rendered_html =
+        email.body.html || email.body.text || JSON.stringify(email.body);
+    } else {
+      rendered_html =
+        email.html || email.text || email.htmlBody || email.textBody || "";
+    }
 
     // Always POST debug info so we can see what the trigger provides
     const eventKeys = Object.keys(email || {});
