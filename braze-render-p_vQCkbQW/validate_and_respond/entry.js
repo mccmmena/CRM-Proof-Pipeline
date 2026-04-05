@@ -5,7 +5,7 @@ const DEFAULTS = {
   from_name: "McClatchy Test",
   braze_app_id: "3f5340d5-1868-4fc0-b783-b36dd6185ab6",
   external_user_ids: [
-    "ad0e2d4700023d3462ac8a72ca9c7dfc2621bbcf83f8ffddd4f963e7c92488bb",
+    "0569ea91b4216badd6252af79cf08cbf9f2524e5d9480e0f7be83e79dc9d275c",
   ],
 };
 
