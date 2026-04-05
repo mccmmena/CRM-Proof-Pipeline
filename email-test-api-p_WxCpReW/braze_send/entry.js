@@ -12,7 +12,7 @@ export default defineComponent({
 
     const response = await axios($, {
       method: "POST",
-      url: `${this.braze.$auth.rest_api_base_url}/messages/send`,
+      url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/messages/send`,
       headers: {
         Authorization: `Bearer ${this.braze.$auth.api_key}`,
         "Content-Type": "application/json",
