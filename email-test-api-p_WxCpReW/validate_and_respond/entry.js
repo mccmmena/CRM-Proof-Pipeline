@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 const DEFAULTS = {
-  from_email: "noreply@mcclatchy.com",
+  from_email: "test@content.mcclatchymedia.com",
   from_name: "McClatchy Test",
   braze_app_id: "3f5340d5-1868-4fc0-b783-b36dd6185ab6",
   external_user_ids: [
