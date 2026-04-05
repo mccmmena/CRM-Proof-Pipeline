@@ -8,11 +8,6 @@ export default defineComponent({
     "Validates the incoming request, applies defaults, builds the Braze payload, and immediately responds 202 to free the HTTP caller.",
   type: "action",
   props: {
-    trigger_body: {
-      type: "any",
-      label: "Trigger Body",
-      description: "The HTTP request body from the trigger",
-    },
     default_from_email: {
       type: "string",
       label: "Default From Email",
@@ -31,8 +26,8 @@ export default defineComponent({
       label: "Braze App ID",
     },
   },
-  async run({ $ }) {
-    const body = this.trigger_body;
+  async run({ steps, $ }) {
+    const body = steps.trigger.event.body;
 
     // Validate required fields
     if (!body.html_body) {

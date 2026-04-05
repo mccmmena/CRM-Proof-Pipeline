@@ -2,56 +2,38 @@ import { axios } from "@pipedream/platform";
 
 export default defineComponent({
   name: "Post Results to Callback",
-  version: "0.0.1",
+  version: "0.0.2",
   key: "post-to-callback",
   description:
     "POSTs the Email on Acid results (screenshots, analysis) to the caller's callback URL.",
   type: "action",
-  props: {
-    callback_url: {
-      type: "string",
-      label: "Callback URL",
-      description: "The URL to POST results to",
-    },
-    subject: {
-      type: "string",
-      label: "Subject",
-    },
-    testId: {
-      type: "string",
-      label: "EOA Test ID",
-    },
-    screenshots: {
-      type: "any",
-      label: "Screenshots",
-      description: "Array of screenshot objects from EOA",
-    },
-    fullResults: {
-      type: "any",
-      label: "Full Results",
-      description: "Complete EOA results object",
-    },
-  },
-  async run({ $ }) {
+  props: {},
+  async run({ steps, $ }) {
+    const callback_url = steps.validate_and_respond.$return_value.callback_url;
+    const subject = steps.validate_and_respond.$return_value.subject;
+    const testId = steps.eoa_find_test.$return_value.testId;
+    const screenshots = steps.eoa_get_results.$return_value.screenshots;
+    const fullResults = steps.eoa_get_results.$return_value.fullResults;
+
     const payload = {
       status: "complete",
-      subject: this.subject,
-      testId: this.testId,
-      screenshots: this.screenshots,
-      full_results: this.fullResults,
+      subject,
+      testId,
+      screenshots,
+      full_results: fullResults,
     };
 
     try {
       const response = await axios($, {
         method: "POST",
-        url: this.callback_url,
+        url: callback_url,
         headers: { "Content-Type": "application/json" },
         data: payload,
       });
 
       $.export(
         "$summary",
-        `Posted ${this.screenshots?.length || 0} screenshots to callback URL`
+        `Posted ${screenshots?.length || 0} screenshots to callback URL`
       );
 
       return { callback_status: "delivered", response };

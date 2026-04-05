@@ -2,7 +2,7 @@ import { axios } from "@pipedream/platform";
 
 export default defineComponent({
   name: "Braze Send Inline Email",
-  version: "0.0.1",
+  version: "0.0.2",
   key: "braze-send-inline",
   description:
     "Sends an email with inline HTML/Liquid content via the Braze /messages/send endpoint.",
@@ -12,14 +12,10 @@ export default defineComponent({
       type: "app",
       app: "braze",
     },
-    payload: {
-      type: "any",
-      label: "Braze Payload",
-      description:
-        "The /messages/send payload with external_user_ids and messages.email",
-    },
   },
-  async run({ $ }) {
+  async run({ steps, $ }) {
+    const payload = steps.validate_and_respond.$return_value.braze_payload;
+
     const response = await axios($, {
       method: "POST",
       url: `${this.braze.$auth.rest_api_base_url}/messages/send`,
@@ -27,7 +23,7 @@ export default defineComponent({
         Authorization: `Bearer ${this.braze.$auth.api_key}`,
         "Content-Type": "application/json",
       },
-      data: this.payload,
+      data: payload,
     });
 
     $.export(

@@ -2,7 +2,7 @@ import { axios } from "@pipedream/platform";
 
 export default defineComponent({
   name: "Email on Acid Get Results",
-  version: "0.0.1",
+  version: "0.0.2",
   key: "eoa-get-results",
   description:
     "Retrieves screenshot URLs and full results from an Email on Acid test. Optionally filters by client keys.",
@@ -12,34 +12,25 @@ export default defineComponent({
       type: "app",
       app: "email_on_acid",
     },
-    testId: {
-      type: "string",
-      label: "Test ID",
-      description: "The unique ID of the Email on Acid test.",
-    },
-    clientKeys: {
-      type: "string[]",
-      label: "Client Keys",
-      description:
-        "Optional: A list of client keys (e.g., 'iphone14_16', 'outlook19'). If provided, only results for these clients are returned.",
-      optional: true,
-    },
   },
-  async run({ $ }) {
+  async run({ steps, $ }) {
+    const testId = steps.eoa_find_test.$return_value.testId;
+    const clientKeys = steps.validate_and_respond.$return_value.client_keys;
+
     const auth = Buffer.from(
       `${this.email_on_acid.$auth.api_key}:${this.email_on_acid.$auth.account_password}`
     ).toString("base64");
 
     const response = await axios($, {
       method: "GET",
-      url: `https://api.emailonacid.com/v5/email/tests/${this.testId}/results`,
+      url: `https://api.emailonacid.com/v5/email/tests/${testId}/results`,
       headers: { Authorization: `Basic ${auth}` },
     });
 
-    const isFiltering = this.clientKeys && this.clientKeys.length > 0;
+    const isFiltering = clientKeys && clientKeys.length > 0;
 
     if (isFiltering) {
-      const missingKeys = this.clientKeys.filter((key) => !response[key]);
+      const missingKeys = clientKeys.filter((key) => !response[key]);
       if (missingKeys.length > 0) {
         console.log(
           `Warning: Some client keys were not found: ${missingKeys.join(", ")}`
@@ -48,7 +39,7 @@ export default defineComponent({
     }
 
     const screenshots = Object.entries(response || {})
-      .filter(([client]) => !isFiltering || this.clientKeys.includes(client))
+      .filter(([client]) => !isFiltering || clientKeys.includes(client))
       .map(([client, data]) => ({
         client,
         url: data.screenshots?.default || data.url,
@@ -63,11 +54,11 @@ export default defineComponent({
 
     $.export(
       "$summary",
-      `Retrieved ${screenshots.length} screenshot URLs for test ${this.testId}`
+      `Retrieved ${screenshots.length} screenshot URLs for test ${testId}`
     );
 
     return {
-      testId: this.testId,
+      testId,
       screenshots,
       fullResults: response,
     };
