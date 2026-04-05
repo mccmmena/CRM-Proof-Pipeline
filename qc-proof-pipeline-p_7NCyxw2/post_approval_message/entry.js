@@ -178,7 +178,7 @@ export default defineComponent({
     // can chat.update later
     await this.snowflake.executeQuery({
       sqlText: `
-        UPDATE CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS
+        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
         SET SLACK_CHANNEL_ID = ?,
             SLACK_MESSAGE_TS = ?
         WHERE RUN_ID = ?

@@ -22,7 +22,7 @@ export default defineComponent({
     // Conditional UPDATE — only wins if DECISION is still PENDING
     const result = await this.snowflake.executeQuery({
       sqlText: `
-        UPDATE CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS
+        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
         SET DECISION = ?,
             DECIDED_BY = ?,
             DECIDED_AT = CURRENT_TIMESTAMP()

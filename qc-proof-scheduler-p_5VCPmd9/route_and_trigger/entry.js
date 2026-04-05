@@ -39,7 +39,7 @@ export default defineComponent({
     const configResult = await this.snowflake.executeQuery({
       sqlText: `
         SELECT NEWSLETTER_KEY
-        FROM CRM_OPS.NEWSLETTER.NEWSLETTER_CONFIG
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
         WHERE ENABLED = TRUE
       `,
     });

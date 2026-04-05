@@ -32,7 +32,7 @@ export default defineComponent({
       // Just finalize the row — AI stays in catalog.
       await this.snowflake.executeQuery({
         sqlText: `
-          UPDATE CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS
+          UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
           SET FINALIZED_AT = CURRENT_TIMESTAMP()
           WHERE RUN_ID = ?
         `,
@@ -70,7 +70,7 @@ export default defineComponent({
     // Conditional UPDATE — only sets TIMEOUT if still PENDING
     const result = await this.snowflake.executeQuery({
       sqlText: `
-        UPDATE CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS
+        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
         SET DECISION = 'TIMEOUT',
             FINALIZED_AT = CURRENT_TIMESTAMP()
         WHERE RUN_ID = ?

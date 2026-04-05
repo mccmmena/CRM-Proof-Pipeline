@@ -28,7 +28,7 @@ export default defineComponent({
     const run_id = uuid();
 
     const sql = `
-      INSERT INTO CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS
+      INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
         (RUN_ID, NEWSLETTER_KEY, NEXT_SEND_TIME, PREP_STARTED_AT, STORIES, DECISION)
       SELECT ?, ?, ?, CURRENT_TIMESTAMP(), PARSE_JSON(?), 'PENDING'
     `;

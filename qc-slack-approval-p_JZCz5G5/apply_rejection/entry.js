@@ -34,8 +34,8 @@ export default defineComponent({
     const result = await this.snowflake.executeQuery({
       sqlText: `
         SELECT c.BRAZE_CATALOG_ID
-        FROM CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS r
-        JOIN CRM_OPS.NEWSLETTER.NEWSLETTER_CONFIG c
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS r
+        JOIN MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG c
           ON c.NEWSLETTER_KEY = r.NEWSLETTER_KEY
         WHERE r.RUN_ID = ?
       `,

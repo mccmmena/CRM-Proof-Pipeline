@@ -1,10 +1,7 @@
 -- Newsletter AI Content + Approval Workflow schema
 --
--- Database/schema: PLACEHOLDER — update CRM_OPS.NEWSLETTER to match your
--- production setup before running. The entry.js files reference the same
--- database.schema names, so keep them in sync.
-
-CREATE SCHEMA IF NOT EXISTS CRM_OPS.NEWSLETTER;
+-- Database/schema: MCC_RAW.MARKETING_DEV (shared with other dev CRM objects).
+-- Keep entry.js table references in sync if you move these tables.
 
 -- ----------------------------------------------------------------------------
 -- NEWSLETTER_CONFIG
@@ -12,7 +9,7 @@ CREATE SCHEMA IF NOT EXISTS CRM_OPS.NEWSLETTER;
 -- campaign name or canvas name so qc-proof-scheduler/route_and_trigger can
 -- route to content-prep.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS CRM_OPS.NEWSLETTER.NEWSLETTER_CONFIG (
+CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG (
   NEWSLETTER_KEY        STRING        NOT NULL,
   DISPLAY_NAME          STRING        NOT NULL,
   JSON_FEED_URL         STRING        NOT NULL,
@@ -33,7 +30,7 @@ CREATE TABLE IF NOT EXISTS CRM_OPS.NEWSLETTER.NEWSLETTER_CONFIG (
 -- One row per newsletter send. Created by newsletter-content-prep on fetch.
 -- Updated by qc-slack-approval (interactivity) and finalize_decision.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS (
+CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS (
   RUN_ID                STRING        NOT NULL,    -- UUID
   NEWSLETTER_KEY        STRING        NOT NULL,
   NEXT_SEND_TIME        TIMESTAMP_NTZ NOT NULL,
@@ -57,7 +54,7 @@ CREATE TABLE IF NOT EXISTS CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS (
 -- ----------------------------------------------------------------------------
 -- Example seed row for pilot testing
 -- ----------------------------------------------------------------------------
--- INSERT INTO CRM_OPS.NEWSLETTER.NEWSLETTER_CONFIG (
+-- INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG (
 --   NEWSLETTER_KEY, DISPLAY_NAME, JSON_FEED_URL, BRAZE_CATALOG_ID,
 --   MAX_STORIES, SLACK_CHANNEL_ID, APPROVERS, AI_PROMPT_TEMPLATE, AI_MODEL
 -- ) SELECT

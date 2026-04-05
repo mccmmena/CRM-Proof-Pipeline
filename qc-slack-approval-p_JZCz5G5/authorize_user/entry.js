@@ -17,7 +17,7 @@ export default defineComponent({
     const result = await this.snowflake.executeQuery({
       sqlText: `
         SELECT APPROVERS
-        FROM CRM_OPS.NEWSLETTER.NEWSLETTER_CONFIG
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
         WHERE NEWSLETTER_KEY = ?
       `,
       binds: [newsletter_key],

@@ -13,7 +13,7 @@ export default defineComponent({
       steps.generate_ai_content.$return_value;
 
     const sql = `
-      UPDATE CRM_OPS.NEWSLETTER.NEWSLETTER_RUNS
+      UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
       SET AI_SUBJECT = ?,
           AI_INTRO = ?,
           AI_MODEL = ?,
