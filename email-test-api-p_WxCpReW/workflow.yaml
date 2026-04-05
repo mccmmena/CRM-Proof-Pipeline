@@ -12,9 +12,16 @@ steps:
 - namespace: eoa_create_test
   runtime: nodejs20.x
   uses: "./eoa_create_test/entry.js"
+  props:
+    email_on_acid:
+      authProvisionId: apn_b6hZOVx
 - namespace: eoa_poll_results
   runtime: nodejs20.x
   uses: "./eoa_poll_results/entry.js"
+  props:
+    email_on_acid:
+      authProvisionId: apn_b6hZOVx
 - namespace: post_to_callback
   runtime: nodejs20.x
   uses: "./post_to_callback/entry.js"
+
