@@ -12,7 +12,13 @@ steps:
 - namespace: store_callback
   runtime: nodejs20.x
   uses: "./store_callback/entry.js"
+  props:
+    data:
+      storeId: ds_7QundV5
 - namespace: braze_send
   runtime: nodejs20.x
   uses: "./braze_send/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_0WhgpWJ
 
