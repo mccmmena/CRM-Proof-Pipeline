@@ -1,6 +1,12 @@
 import { axios } from "@pipedream/platform";
 
 export default defineComponent({
+  name: "Email on Acid Get Results",
+  version: "0.0.2",
+  key: "eoa-get-results",
+  description:
+    "Retrieves screenshot URLs and full results from an Email on Acid test. Optionally filters by client keys.",
+  type: "action",
   props: {
     email_on_acid: {
       type: "app",
