@@ -8,24 +8,42 @@ steps:
 - namespace: load_config
   runtime: nodejs20.x
   uses: "./load_config/entry.js"
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
 - namespace: fetch_feed
   runtime: nodejs20.x
   uses: "./fetch_feed/entry.js"
 - namespace: write_run_history
   runtime: nodejs20.x
   uses: "./write_run_history/entry.js"
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
 - namespace: upsert_slot_rows
   runtime: nodejs20.x
   uses: "./upsert_slot_rows/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_6LhOGA9
 - namespace: generate_ai_content
   runtime: nodejs20.x
   uses: "./generate_ai_content/entry.js"
+  props:
+    openai:
+      authProvisionId: apn_QPhO4kd
 - namespace: upsert_meta_row
   runtime: nodejs20.x
   uses: "./upsert_meta_row/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_6LhOGA9
 - namespace: write_ai_to_history
   runtime: nodejs20.x
   uses: "./write_ai_to_history/entry.js"
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
 - namespace: seed_decision_state
   runtime: nodejs20.x
   uses: "./seed_decision_state/entry.js"
@@ -41,3 +59,9 @@ steps:
 - namespace: finalize_decision
   runtime: nodejs20.x
   uses: "./finalize_decision/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_6LhOGA9
+    snowflake:
+      authProvisionId: apn_yghdQYJ
+
