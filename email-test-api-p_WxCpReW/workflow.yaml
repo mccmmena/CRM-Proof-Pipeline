@@ -12,6 +12,9 @@ steps:
 - namespace: braze_send
   runtime: nodejs20.x
   uses: "./braze_send/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_0WhgpWJ
 - namespace: wait_for_eoa
   runtime: nodejs20.x
   uses: delay-workflow-delay@0.0.2
@@ -21,9 +24,16 @@ steps:
 - namespace: eoa_find_test
   runtime: nodejs20.x
   uses: "./eoa_find_test/entry.js"
+  props:
+    email_on_acid:
+      authProvisionId: apn_b6hZOVx
 - namespace: eoa_get_results
   runtime: nodejs20.x
   uses: "./eoa_get_results/entry.js"
+  props:
+    email_on_acid:
+      authProvisionId: apn_b6hZOVx
 - namespace: post_to_callback
   runtime: nodejs20.x
   uses: "./post_to_callback/entry.js"
+
