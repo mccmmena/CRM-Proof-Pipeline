@@ -5,4 +5,13 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_8GHgYgW
-
+steps:
+- namespace: validate_and_respond
+  runtime: nodejs20.x
+  uses: "./validate_and_respond/entry.js"
+- namespace: store_callback
+  runtime: nodejs20.x
+  uses: "./store_callback/entry.js"
+- namespace: braze_send
+  runtime: nodejs20.x
+  uses: "./braze_send/entry.js"

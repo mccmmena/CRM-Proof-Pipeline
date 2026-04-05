@@ -4,4 +4,7 @@ settings:
   error_notification: true
 triggers:
 - id: ei_0bT1R4
-
+steps:
+- namespace: extract_and_callback
+  runtime: nodejs20.x
+  uses: "./extract_and_callback/entry.js"

@@ -9,31 +9,12 @@ steps:
 - namespace: validate_and_respond
   runtime: nodejs20.x
   uses: "./validate_and_respond/entry.js"
-- namespace: braze_send
+- namespace: eoa_create_test
   runtime: nodejs20.x
-  uses: "./braze_send/entry.js"
-  props:
-    braze:
-      authProvisionId: apn_0WhgpWJ
-- namespace: wait_for_eoa
+  uses: "./eoa_create_test/entry.js"
+- namespace: eoa_poll_results
   runtime: nodejs20.x
-  uses: delay-workflow-delay@0.0.2
-  props:
-    delayDurationValue: 10
-    delayDurationUnit: Minutes
-- namespace: eoa_find_test
-  runtime: nodejs20.x
-  uses: "./eoa_find_test/entry.js"
-  props:
-    email_on_acid:
-      authProvisionId: apn_b6hZOVx
-- namespace: eoa_get_results
-  runtime: nodejs20.x
-  uses: "./eoa_get_results/entry.js"
-  props:
-    email_on_acid:
-      authProvisionId: apn_b6hZOVx
+  uses: "./eoa_poll_results/entry.js"
 - namespace: post_to_callback
   runtime: nodejs20.x
   uses: "./post_to_callback/entry.js"
-

@@ -4,9 +4,9 @@ export default defineComponent({
   async run({ steps, $ }) {
     const callback_url = steps.validate_and_respond.$return_value.callback_url;
     const subject = steps.validate_and_respond.$return_value.subject;
-    const testId = steps.eoa_find_test.$return_value.testId;
-    const screenshots = steps.eoa_get_results.$return_value.screenshots;
-    const fullResults = steps.eoa_get_results.$return_value.fullResults;
+    const testId = steps.eoa_create_test.$return_value.testId;
+    const screenshots = steps.eoa_poll_results.$return_value.screenshots;
+    const fullResults = steps.eoa_poll_results.$return_value.fullResults;
 
     const payload = {
       status: "complete",
