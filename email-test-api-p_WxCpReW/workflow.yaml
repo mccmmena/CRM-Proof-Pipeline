@@ -5,26 +5,16 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_a1HnwvK
-  respond: true
 steps:
 - namespace: validate_and_respond
   runtime: nodejs20.x
   uses: "./validate_and_respond/entry.js"
-  props:
-    trigger_body: "{{steps.trigger.event.body}}"
-    default_from_email: noreply@mcclatchy.com
-    default_from_name: McClatchy Test
-    default_external_user_ids:
-    - 857377f082c49017236f8329b96c058ca64c80348699c0a0fde7765e76414da0
-    - bedc20a4cb62391c5469ce0158c82770102ef06be5426b1eefef0dce13bc4193
-    braze_app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
 - namespace: braze_send
   runtime: nodejs20.x
   uses: "./braze_send/entry.js"
   props:
     braze:
       authProvisionId: apn_0WhgpWJ
-    payload: "{{steps.validate_and_respond.$return_value.braze_payload}}"
 - namespace: wait_for_eoa
   runtime: nodejs20.x
   uses: delay-workflow-delay@0.0.2
@@ -37,21 +27,13 @@ steps:
   props:
     email_on_acid:
       authProvisionId: apn_b6hZOVx
-    subject: "{{steps.validate_and_respond.$return_value.subject}}"
 - namespace: eoa_get_results
   runtime: nodejs20.x
   uses: "./eoa_get_results/entry.js"
   props:
     email_on_acid:
       authProvisionId: apn_b6hZOVx
-    testId: "{{steps.eoa_find_test.$return_value.testId}}"
-    clientKeys: "{{steps.validate_and_respond.$return_value.client_keys}}"
 - namespace: post_to_callback
   runtime: nodejs20.x
   uses: "./post_to_callback/entry.js"
-  props:
-    callback_url: "{{steps.validate_and_respond.$return_value.callback_url}}"
-    subject: "{{steps.validate_and_respond.$return_value.subject}}"
-    testId: "{{steps.eoa_find_test.$return_value.testId}}"
-    screenshots: "{{steps.eoa_get_results.$return_value.screenshots}}"
-    fullResults: "{{steps.eoa_get_results.$return_value.fullResults}}"
+
