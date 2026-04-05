@@ -5,7 +5,6 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_8GHgYgW
-  respond: true
 steps:
 - namespace: validate_and_respond
   runtime: nodejs20.x
