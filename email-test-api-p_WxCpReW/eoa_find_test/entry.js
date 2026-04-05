@@ -1,6 +1,12 @@
 import { axios } from "@pipedream/platform";
 
 export default defineComponent({
+  name: "Email on Acid Find Test by Subject (with Retry)",
+  version: "0.0.2",
+  key: "eoa-find-test-retry",
+  description:
+    "Searches for an Email on Acid test by subject line. Retries up to 3 times with 30s intervals if the test hasn't appeared yet.",
+  type: "action",
   props: {
     email_on_acid: {
       type: "app",
