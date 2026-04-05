@@ -9,10 +9,6 @@ steps:
 - namespace: validate_and_respond
   runtime: nodejs20.x
   uses: "./validate_and_respond/entry.js"
-  props:
-    default_external_user_ids:
-    - ad0e2d4700023d3462ac8a72ca9c7dfc2621bbcf83f8ffddd4f963e7c92488bb
-    braze_app_id: MCC
 - namespace: braze_send
   runtime: nodejs20.x
   uses: "./braze_send/entry.js"

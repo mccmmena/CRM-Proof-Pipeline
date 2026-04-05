@@ -1,31 +1,22 @@
 import crypto from "crypto";
 
+const DEFAULTS = {
+  from_email: "noreply@mcclatchy.com",
+  from_name: "McClatchy Test",
+  braze_app_id: "3f5340d5-1868-4fc0-b783-b36dd6185ab6",
+  external_user_ids: [
+    "ad0e2d4700023d3462ac8a72ca9c7dfc2621bbcf83f8ffddd4f963e7c92488bb",
+  ],
+};
+
 export default defineComponent({
   name: "Validate and Respond",
-  version: "0.0.1",
+  version: "0.0.2",
   key: "validate-and-respond",
   description:
     "Validates the incoming request, applies defaults, builds the Braze payload, and immediately responds 202 to free the HTTP caller.",
   type: "action",
-  props: {
-    default_from_email: {
-      type: "string",
-      label: "Default From Email",
-    },
-    default_from_name: {
-      type: "string",
-      label: "Default From Name",
-    },
-    default_external_user_ids: {
-      type: "string[]",
-      label: "Default External User IDs",
-      description: "Braze external user IDs for test recipients",
-    },
-    braze_app_id: {
-      type: "string",
-      label: "Braze App ID",
-    },
-  },
+  props: {},
   async run({ steps, $ }) {
     const body = steps.trigger.event.body;
 
@@ -58,11 +49,11 @@ export default defineComponent({
       .slice(0, 8);
     const subject = body.subject || `liquid-test_${Date.now()}_${hash}`;
 
-    // Apply defaults
-    const from_email = body.from_email || this.default_from_email;
-    const from_name = body.from_name || this.default_from_name;
+    // Apply defaults (request body can override any of these)
+    const from_email = body.from_email || DEFAULTS.from_email;
+    const from_name = body.from_name || DEFAULTS.from_name;
     const external_user_ids =
-      body.external_user_ids || this.default_external_user_ids;
+      body.external_user_ids || DEFAULTS.external_user_ids;
     const client_keys = body.client_keys || null;
 
     // Build Braze /messages/send payload
@@ -70,7 +61,7 @@ export default defineComponent({
       external_user_ids,
       messages: {
         email: {
-          app_id: this.braze_app_id,
+          app_id: DEFAULTS.braze_app_id,
           subject,
           from: `${from_name} <${from_email}>`,
           body: body.html_body,
