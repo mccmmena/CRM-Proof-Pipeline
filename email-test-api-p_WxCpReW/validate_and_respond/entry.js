@@ -62,6 +62,7 @@ export default defineComponent({
       },
     };
 
+    
     // Respond immediately to free the caller
     await $.respond({
       immediate: true,
