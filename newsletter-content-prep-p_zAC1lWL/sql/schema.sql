@@ -9,17 +9,22 @@
 -- campaign name or canvas name so qc-proof-scheduler/route_and_trigger can
 -- route to content-prep.
 -- ----------------------------------------------------------------------------
+-- FEED_SOURCES is an ordered array of feed specs. Each element:
+--   { "url": "https://...", "count": 3, "label": "optional section name" }
+-- Array order = story order in the final email. Stories are fetched from
+-- each feed in turn, sliced to `count`, concatenated, and assigned
+-- slot_1..slot_N. Sum of counts should equal MAX_STORIES.
 CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG (
   NEWSLETTER_KEY        STRING        NOT NULL,
   DISPLAY_NAME          STRING        NOT NULL,
-  JSON_FEED_URL         STRING        NOT NULL,
+  FEED_SOURCES          VARIANT       NOT NULL,
   BRAZE_CATALOG_ID      STRING        NOT NULL,
   MAX_STORIES           NUMBER(3,0)   NOT NULL DEFAULT 5,
   SLACK_CHANNEL_ID      STRING        NOT NULL,
   APPROVERS             ARRAY,        -- array of Slack user IDs
   ENABLED               BOOLEAN       NOT NULL DEFAULT TRUE,
   AI_PROMPT_TEMPLATE    STRING,
-  AI_MODEL              STRING        DEFAULT 'gpt-4o-mini',
+  AI_MODEL              STRING        DEFAULT 'gpt-5.4-mini',
   CREATED_AT            TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
   UPDATED_AT            TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
   CONSTRAINT PK_NEWSLETTER_CONFIG PRIMARY KEY (NEWSLETTER_KEY)
@@ -53,17 +58,30 @@ CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS (
 
 -- ----------------------------------------------------------------------------
 -- Example seed row for pilot testing
+--
+-- FEED_SOURCES is a VARIANT — use PARSE_JSON to populate it. The array can
+-- contain one entry (single feed) or many (mix of feeds with per-feed counts
+-- that sum to MAX_STORIES).
 -- ----------------------------------------------------------------------------
 -- INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG (
---   NEWSLETTER_KEY, DISPLAY_NAME, JSON_FEED_URL, BRAZE_CATALOG_ID,
---   MAX_STORIES, SLACK_CHANNEL_ID, APPROVERS, AI_PROMPT_TEMPLATE, AI_MODEL
+--   NEWSLETTER_KEY, DISPLAY_NAME, FEED_SOURCES, BRAZE_CATALOG_ID,
+--   MAX_STORIES, SLACK_CHANNEL_ID, APPROVERS, AI_PROMPT_TEMPLATE, AI_MODEL,
+--   ENABLED
 -- ) SELECT
---   'morning_briefing',
---   'Morning Briefing',
---   'https://example.com/feeds/morning_briefing.json',
---   'newsletter_morning_briefing',
---   5,
+--   'crm_the_trailhead_master',
+--   'The Trailhead',
+--   PARSE_JSON('[{"url":"https://www.newshunter.com/feed/trailhead","count":9}]'),
+--   'crm_trailhead_stories',
+--   9,
 --   'C0123456789',
---   ARRAY_CONSTRUCT('U0ABCDEFG', 'U0HIJKLMN'),
+--   ARRAY_CONSTRUCT('U0ABCDEFG'),
 --   NULL,
---   'gpt-4o-mini';
+--   'gpt-5.4-mini',
+--   FALSE;
+--
+-- Multi-feed example (hypothetical):
+-- PARSE_JSON('[
+--   {"url":"https://feed-a/local.json",   "count":3, "label":"Local"},
+--   {"url":"https://feed-b/sports.json",  "count":4, "label":"Sports"},
+--   {"url":"https://feed-c/biz.json",     "count":5, "label":"Business"}
+-- ]')
