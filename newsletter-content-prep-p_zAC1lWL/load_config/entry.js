@@ -1,21 +1,12 @@
-// Load newsletter configuration from Snowflake
-// Reads NEWSLETTER_CONFIG by newsletter_key (campaign/canvas name from scheduler)
+// Process the raw config query result from the built-in Snowflake step.
+// Parses FEED_SOURCES, validates, and returns a clean config object.
 //
-// Expects trigger body: { newsletter_key, next_send_time }
-//
+// Reads: load_config_query result (raw rows from Snowflake)
 // Returns: { newsletter_key, display_name, feed_sources, braze_catalog_id,
 //            max_stories, slack_channel_id, approvers, ai_prompt_template,
 //            ai_model, next_send_time }
-//
-// feed_sources is an array of { url, count, label? } — see fetch_feed.
 
 export default defineComponent({
-  props: {
-    snowflake: {
-      type: "app",
-      app: "snowflake",
-    },
-  },
   async run({ steps, $ }) {
     const body = steps.trigger.event.body;
 
@@ -26,58 +17,31 @@ export default defineComponent({
       throw new Error("trigger body missing next_send_time");
     }
 
-    const newsletter_key = body.newsletter_key;
     const next_send_time = body.next_send_time;
+    const rows = steps.load_config_query.$return_value || [];
 
-    // TODO: verify database.schema matches production setup
-    const sql = `
-      SELECT
-        NEWSLETTER_KEY,
-        DISPLAY_NAME,
-        FEED_SOURCES,
-        BRAZE_CATALOG_ID,
-        MAX_STORIES,
-        SLACK_CHANNEL_ID,
-        APPROVERS,
-        AI_PROMPT_TEMPLATE,
-        AI_MODEL,
-        ENABLED
-      FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
-      WHERE NEWSLETTER_KEY = ?
-        AND ENABLED = TRUE
-      LIMIT 1
-    `;
-
-    const result = await this.snowflake.executeQuery({
-      sqlText: sql,
-      binds: [newsletter_key],
-    });
-
-    const rows = result?.rows || [];
     if (rows.length === 0) {
       throw new Error(
-        `No enabled NEWSLETTER_CONFIG row found for key: ${newsletter_key}`
+        `No enabled NEWSLETTER_CONFIG row found for key: ${body.newsletter_key}`
       );
     }
 
     const row = rows[0];
 
-    // FEED_SOURCES is a Snowflake VARIANT — the snowflake-sdk driver returns
-    // VARIANT values as strings of JSON, so parse defensively. If it's
-    // already an array/object (some drivers auto-parse), pass it through.
+    // FEED_SOURCES is a Snowflake VARIANT — may come back as string or object
     let feed_sources = row.FEED_SOURCES;
     if (typeof feed_sources === "string") {
       try {
         feed_sources = JSON.parse(feed_sources);
       } catch (e) {
         throw new Error(
-          `FEED_SOURCES for ${newsletter_key} is not valid JSON: ${e.message}`
+          `FEED_SOURCES for ${body.newsletter_key} is not valid JSON: ${e.message}`
         );
       }
     }
     if (!Array.isArray(feed_sources) || feed_sources.length === 0) {
       throw new Error(
-        `FEED_SOURCES for ${newsletter_key} must be a non-empty array`
+        `FEED_SOURCES for ${body.newsletter_key} must be a non-empty array`
       );
     }
 
