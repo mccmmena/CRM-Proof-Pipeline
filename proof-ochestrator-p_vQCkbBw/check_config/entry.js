@@ -1,13 +1,7 @@
-// Look up NEWSLETTER_CONFIG for the incoming campaign name.
-// Returns the config row if found (enabled), or null if not a newsletter.
+// Process the config query result from the built-in Snowflake step.
+// Returns the config row if found, or null if not a newsletter.
 
 export default defineComponent({
-  props: {
-    snowflake: {
-      type: "app",
-      app: "snowflake",
-    },
-  },
   async run({ steps, $ }) {
     const body = steps.trigger.event.body;
     const campaignName = body.name || body.campaign_name || body.canvas_name;
@@ -17,27 +11,7 @@ export default defineComponent({
       return null;
     }
 
-    const result = await this.snowflake.executeQuery({
-      sqlText: `
-        SELECT
-          NEWSLETTER_KEY,
-          DISPLAY_NAME,
-          FEED_SOURCES,
-          BRAZE_CATALOG_ID,
-          MAX_STORIES,
-          SLACK_CHANNEL_ID,
-          APPROVERS,
-          AI_PROMPT_TEMPLATE,
-          AI_MODEL
-        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
-        WHERE NEWSLETTER_KEY = ?
-          AND ENABLED = TRUE
-        LIMIT 1
-      `,
-      binds: [campaignName],
-    });
-
-    const rows = result?.rows || [];
+    const rows = steps.check_config_query.$return_value || [];
     if (rows.length === 0) {
       console.warn(
         `No enabled NEWSLETTER_CONFIG row for "${campaignName}" — content-prep will be skipped`

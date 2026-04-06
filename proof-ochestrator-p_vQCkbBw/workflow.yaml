@@ -8,12 +8,23 @@ settings:
 triggers:
 - id: hi_MWHpn8Z
 steps:
-- namespace: check_config
+- namespace: check_config_query
   runtime: nodejs20.x
-  uses: "./check_config/entry.js"
+  uses: snowflake-execute-sql-query@0.2.3
   props:
     snowflake:
       authProvisionId: apn_yghdQYJ
+    sql:
+      query: >-
+        SELECT NEWSLETTER_KEY, DISPLAY_NAME, BRAZE_CATALOG_ID
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
+        WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
+        LIMIT 1
+      params:
+      - "{{steps.trigger.event.body.name || steps.trigger.event.body.campaign_name || steps.trigger.event.body.canvas_name}}"
+- namespace: check_config
+  runtime: nodejs20.x
+  uses: "./check_config/entry.js"
 - namespace: optional_delay
   runtime: nodejs20.x
   uses: "./optional_delay/entry.js"
