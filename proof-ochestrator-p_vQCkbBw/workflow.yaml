@@ -11,9 +11,7 @@ steps:
 - namespace: check_config
   runtime: nodejs20.x
   uses: "./check_config/entry.js"
-  props:
-    snowflake:
-      authProvisionId: apn_yghdQYJ
+  props: {}
 
 - namespace: trigger_content_prep
   runtime: nodejs20.x
@@ -39,8 +37,6 @@ steps:
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
   props:
-    braze:
-      authProvisionId: apn_1Khpe1W
     app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
     scheduledItem: "{{steps.trigger.event.body}}"
     subject: "{{steps.trigger.event.body.name}}_{{steps.trigger.context.id}}"
@@ -64,8 +60,6 @@ steps:
   runtime: nodejs20.x
   uses: "./upload_multiple_screenshots_to_drive/entry.js"
   props:
-    google_drive:
-      authProvisionId: apn_mnh5B9x
     screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
     messageName: "{{steps.trigger.event.body.name}}"
