@@ -12,9 +12,6 @@ steps:
   props:
     snowflake:
       authProvisionId: apn_yghdQYJ
-- namespace: trigger_content_prep
-  runtime: nodejs20.x
-  uses: "./trigger_content_prep/entry.js"
 - namespace: calc_one_hour_before_send
   runtime: nodejs20.x
   uses: "./calc_one_hour_before_send/entry.js"
@@ -27,6 +24,9 @@ steps:
   props:
     delayDurationValue: "{{steps.calc_one_hour_before_send.$return_value}}"
     delayDurationUnit: Minutes
+- namespace: suspend_for_content_prep
+  runtime: nodejs20.x
+  uses: "./suspend_for_content_prep/entry.js"
 - namespace: utils_rebuild_braze_message
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"

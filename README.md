@@ -18,14 +18,15 @@ Per-campaign QC orchestration: checks newsletter config, triggers content-prep, 
 
 - **`qc-proof-scheduler-p_5VCPmd9/`** — cron-style scheduler. Fetches today's scheduled Braze messages, filters by the `Proof` tag, and POSTs each item to the proof orchestrator.
 - **`proof-ochestrator-p_vQCkbBw/`** — the main per-campaign workflow. For each Braze item:
-  1. Checks `NEWSLETTER_CONFIG` in Snowflake — if match, fires `newsletter-content-prep` (fire-and-forget)
+  1. Checks `NEWSLETTER_CONFIG` in Snowflake
   2. Delays until T-1h via `$.flow.delay`
-  3. Rebuilds the Braze message to extract the Liquid template
-  4. **Suspends** (`$.flow.suspend`) and calls braze-render with the `resume_url` as callback. Resumes when rendered HTML is delivered.
-  5. **Suspends** again and calls email-test-api with the rendered HTML. Resumes when screenshots are delivered.
-  6. Uploads screenshots to Google Drive (`YYYY-MM-DD/{campaign}/`)
-  7. Filter: continues only if campaign has `Proof/Slack` tag and it's a weekday
-  8. (Disabled) Newsletter approval: looks up `NEWSLETTER_RUNS`, posts Slack Block Kit message with Approve/Reject buttons, **suspends** until button click or T-10m timeout, then applies the decision.
+  3. If newsletter match: **suspends** and calls `newsletter-content-prep` with `resume_url` as callback. Resumes when content-prep finishes (stories locked, AI generated).
+  4. Rebuilds the Braze message to extract the Liquid template
+  5. **Suspends** and calls braze-render with the `resume_url` as callback. Resumes when rendered HTML is delivered.
+  6. **Suspends** again and calls email-test-api with the rendered HTML. Resumes when screenshots are delivered.
+  7. Uploads screenshots to Google Drive (`YYYY-MM-DD/{campaign}/`)
+  8. Filter: continues only if campaign has `Proof/Slack` tag and it's a weekday
+  9. (Disabled) Newsletter approval: looks up `NEWSLETTER_RUNS`, posts Slack Block Kit message with Approve/Reject buttons, **suspends** until button click or T-10m timeout, then applies the decision.
 
 ### Newsletter content pipeline
 
@@ -46,19 +47,18 @@ Locks stories into a Braze catalog, generates AI subject/intro, writes history t
 flowchart TD
   cron[qc-proof-scheduler cron] --> filter{Filter by Proof tag}
   filter --> orch[proof-ochestrator]
-  orch --> configcheck{NEWSLETTER_CONFIG match?}
-  configcheck -->|yes| prep[newsletter-content-prep]
-  configcheck -->|always| delay[Delay until T-1h]
-  prep --> delay
+  orch --> configcheck[Check NEWSLETTER_CONFIG]
+  configcheck --> delay[Delay until T-1h]
 
-  prep --> fetchfeed[Fetch JSON feeds]
-  fetchfeed --> snowhist[INSERT NEWSLETTER_RUNS]
-  snowhist --> slotupsert[Braze PUT slot_1..N]
-  slotupsert --> openai[OpenAI subject + intro]
-  openai --> metaupsert[Braze PUT meta row]
-  metaupsert --> prepdone((prep done))
+  delay --> nlcheck{Newsletter match?}
+  nlcheck -->|yes| suspend0[suspend_for_content_prep]
+  nlcheck -->|no| rebuild[Rebuild Braze message]
+  suspend0 -->|$.flow.suspend| prep[newsletter-content-prep]
+  prep --> fetchfeed[Fetch feeds + lock stories]
+  fetchfeed --> openai[OpenAI subject + intro]
+  openai --> callback[POST callback to resume_url]
+  callback -->|resume| rebuild
 
-  delay --> rebuild[Rebuild Braze message]
   rebuild --> suspend1[suspend_for_render]
   suspend1 -->|$.flow.suspend| brazerender[braze-render service]
   brazerender -->|callback: rendered_html| resume1((resume))
@@ -89,13 +89,14 @@ Timing summary:
 
 | Time | Event |
 |------|-------|
-| Early morning | Scheduler runs, orchestrator fires content-prep (fire-and-forget) |
-| Early morning | Content-prep locks stories + generates AI, exits |
-| T-1h | Orchestrator resumes from delay, rebuilds message |
-| T-1h | **Suspend 1:** braze-render renders Liquid via Braze |
+| Early morning | Scheduler runs, POSTs each campaign to orchestrator |
+| T-1h | Orchestrator resumes from delay |
+| T-1h | **Suspend 1:** content-prep locks stories + generates AI (if newsletter) |
+| ~T-50m | **Suspend 2:** braze-render renders Liquid via Braze |
 | ~T-55m | **Suspend 2:** email-test-api creates EOA test, polls for screenshots |
-| ~T-45m | Screenshots uploaded to Drive |
-| ~T-45m | **Suspend 3:** Slack approval message posted (if newsletter + weekday) |
+| ~T-40m | **Suspend 3:** email-test-api creates EOA test, polls for screenshots |
+| ~T-30m | Screenshots uploaded to Drive |
+| ~T-30m | **Suspend 4:** Slack approval message posted (if newsletter + weekday) |
 | T-10m | Suspension times out if no click -> auto-reject |
 | T-0 | Braze sends the actual campaign using whatever is in the catalog |
 

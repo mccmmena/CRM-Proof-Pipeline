@@ -44,4 +44,7 @@ steps:
   props:
     snowflake:
       authProvisionId: apn_yghdQYJ
+- namespace: post_callback
+  runtime: nodejs20.x
+  uses: "./post_callback/entry.js"
 
