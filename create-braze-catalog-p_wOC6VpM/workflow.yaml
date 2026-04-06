@@ -5,4 +5,11 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_gKHqOlL
+steps:
+- namespace: create_braze_catalog
+  runtime: nodejs20.x
+  uses: "@mcclatchy/create_braze_catalog@0.0.9"
+  props:
+    braze:
+      authProvisionId: apn_6LhOGA9
 
