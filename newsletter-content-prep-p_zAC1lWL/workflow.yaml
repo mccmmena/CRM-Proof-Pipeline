@@ -8,7 +8,6 @@ settings:
 triggers:
 - id: hi_ERHJ2eB
 steps:
-# --- Load config from Snowflake ---
 - namespace: load_config_query
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
@@ -16,25 +15,18 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: >-
-        SELECT NEWSLETTER_KEY, DISPLAY_NAME, FEED_SOURCES, BRAZE_CATALOG_ID,
+      query: SELECT NEWSLETTER_KEY, DISPLAY_NAME, FEED_SOURCES, BRAZE_CATALOG_ID,
         MAX_STORIES, SLACK_CHANNEL_ID, APPROVERS, AI_PROMPT_TEMPLATE, AI_MODEL, ENABLED
-        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
-        WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
-        LIMIT 1
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG WHERE NEWSLETTER_KEY = :1 AND
+        ENABLED = TRUE LIMIT 1
       params:
       - "{{steps.trigger.event.body.newsletter_key}}"
-
 - namespace: load_config
   runtime: nodejs20.x
   uses: "./load_config/entry.js"
-
-# --- Fetch stories from feed(s) ---
 - namespace: fetch_feed
   runtime: nodejs20.x
   uses: "./fetch_feed/entry.js"
-
-# --- Generate UUID for run ---
 - namespace: generate_run_id
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
@@ -42,13 +34,10 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: "SELECT UUID_STRING() AS RUN_ID"
-
+      query: SELECT UUID_STRING() AS RUN_ID
 - namespace: write_run_history
   runtime: nodejs20.x
   uses: "./write_run_history/entry.js"
-
-# --- INSERT run into Snowflake ---
 - namespace: insert_run_history
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
@@ -56,22 +45,17 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: >-
-        INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
-        (RUN_ID, NEWSLETTER_KEY, NEXT_SEND_TIME, PREP_STARTED_AT, STORIES, DECISION)
-        SELECT :1, :2, :3, CURRENT_TIMESTAMP(), PARSE_JSON(:4), 'PENDING'
+      query: INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS (RUN_ID, NEWSLETTER_KEY,
+        NEXT_SEND_TIME, PREP_STARTED_AT, STORIES, DECISION) SELECT :1, :2, :3, CURRENT_TIMESTAMP(),
+        PARSE_JSON(:4), 'PENDING'
       params:
       - "{{steps.write_run_history.$return_value.run_id}}"
       - "{{steps.load_config.$return_value.newsletter_key}}"
       - "{{steps.load_config.$return_value.next_send_time}}"
       - "{{JSON.stringify(steps.fetch_feed.$return_value.stories)}}"
-
-# --- Convert stories to CSV for catalog update ---
 - namespace: json_to_csv
   runtime: nodejs20.x
   uses: "./json_to_csv/entry.js"
-
-# --- Bulk update per-newsletter stories catalog ---
 - namespace: braze_catalog_update
   runtime: nodejs20.x
   uses: "@mcclatchy/braze-catalog-update@0.0.3"
@@ -81,24 +65,18 @@ steps:
     catalogName: "{{steps.load_config.$return_value.braze_catalog_id}}"
     sheetData: "{{steps.json_to_csv.$return_value}}"
     idField: id
-
-# --- OpenAI: generate subject + intro ---
 - namespace: generate_ai_content
   runtime: nodejs20.x
   uses: "./generate_ai_content/entry.js"
   props:
     openai:
       authProvisionId: apn_QPhO4kd
-
-# --- Upsert AI content to shared crm_newsletters_content catalog ---
 - namespace: upsert_meta_row
   runtime: nodejs20.x
   uses: "./upsert_meta_row/entry.js"
   props:
     braze:
       authProvisionId: apn_6LhOGA9
-
-# --- UPDATE run with AI content ---
 - namespace: update_ai_history
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
@@ -106,22 +84,18 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: >-
-        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
-        SET AI_SUBJECT = :1, AI_INTRO = :2, AI_MODEL = :3, AI_RAW_RESPONSE = PARSE_JSON(:4)
-        WHERE RUN_ID = :5
+      query: UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS SET AI_SUBJECT = :1, AI_INTRO
+        = :2, AI_MODEL = :3, AI_RAW_RESPONSE = PARSE_JSON(:4) WHERE RUN_ID = :5
       params:
       - "{{steps.generate_ai_content.$return_value.ai_subject}}"
       - "{{steps.generate_ai_content.$return_value.ai_intro}}"
       - "{{steps.generate_ai_content.$return_value.ai_model}}"
       - "{{JSON.stringify(steps.generate_ai_content.$return_value.raw)}}"
       - "{{steps.write_run_history.$return_value.run_id}}"
-
 - namespace: write_ai_to_history
   runtime: nodejs20.x
   uses: "./write_ai_to_history/entry.js"
-
-# --- Callback to orchestrator ---
 - namespace: post_callback
   runtime: nodejs20.x
   uses: "./post_callback/entry.js"
+
