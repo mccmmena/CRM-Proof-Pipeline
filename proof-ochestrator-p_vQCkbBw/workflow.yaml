@@ -27,6 +27,8 @@ steps:
 - namespace: suspend_for_content_prep
   runtime: nodejs20.x
   uses: "./suspend_for_content_prep/entry.js"
+  props:
+    content_prep_url: https://eo6ad4e0u4fgvuo.m.pipedream.net
 - namespace: utils_rebuild_braze_message
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
@@ -39,9 +41,13 @@ steps:
 - namespace: suspend_for_render
   runtime: nodejs20.x
   uses: "./suspend_for_render/entry.js"
+  props:
+    braze_render_url: https://eov0l2spkm1h5vp.m.pipedream.net
 - namespace: suspend_for_screenshots
   runtime: nodejs20.x
   uses: "./suspend_for_screenshots/entry.js"
+  props:
+    email_test_api_url: https://eoihl6hmsymk4tc.m.pipedream.net
 - namespace: extract_screenshots
   runtime: nodejs20.x
   uses: "./extract_screenshots/entry.js"
@@ -73,10 +79,15 @@ steps:
   disabled: true
   runtime: nodejs20.x
   uses: "./lookup_newsletter_run/entry.js"
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
 - namespace: post_and_suspend
   disabled: true
   runtime: nodejs20.x
   uses: "./post_and_suspend/entry.js"
+  props:
+    dry_run: true
 - namespace: apply_decision
   disabled: true
   runtime: nodejs20.x
