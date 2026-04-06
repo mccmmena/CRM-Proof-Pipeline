@@ -5,16 +5,100 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_MWHpn8Z
+
 steps:
+# --- Orchestration ---
 - namespace: check_config
   runtime: nodejs20.x
   uses: "./check_config/entry.js"
   props:
     snowflake:
       authProvisionId: apn_yghdQYJ
+
 - namespace: trigger_content_prep
   runtime: nodejs20.x
   uses: "./trigger_content_prep/entry.js"
-- namespace: trigger_proof_pipeline
+
+# --- Proof: delay until T-1h ---
+- namespace: calc_one_hour_before_send
   runtime: nodejs20.x
-  uses: "./trigger_proof_pipeline/entry.js"
+  uses: "./calc_one_hour_before_send/entry.js"
+  props:
+    targetTime: "{{steps.trigger.event.body.next_send_time}}"
+    timezone: America/New_York
+
+- namespace: workflow_delay
+  runtime: nodejs20.x
+  uses: delay-workflow-delay@0.0.2
+  props:
+    delayDurationValue: "{{steps.calc_one_hour_before_send.$return_value}}"
+    delayDurationUnit: Minutes
+
+# --- Proof: get Liquid template from Braze ---
+- namespace: utils_rebuild_braze_message
+  runtime: nodejs20.x
+  uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
+  props:
+    braze:
+      authProvisionId: apn_1Khpe1W
+    app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
+    scheduledItem: "{{steps.trigger.event.body}}"
+    subject: "{{steps.trigger.event.body.name}}_{{steps.trigger.context.id}}"
+
+# --- Proof: render Liquid via braze-render service ---
+- namespace: suspend_for_render
+  runtime: nodejs20.x
+  uses: "./suspend_for_render/entry.js"
+
+# --- Proof: get screenshots via email-test-api service ---
+- namespace: suspend_for_screenshots
+  runtime: nodejs20.x
+  uses: "./suspend_for_screenshots/entry.js"
+
+- namespace: extract_screenshots
+  runtime: nodejs20.x
+  uses: "./extract_screenshots/entry.js"
+
+# --- Proof: upload to Google Drive ---
+- namespace: upload_multiple_screenshots_to_drive
+  runtime: nodejs20.x
+  uses: "./upload_multiple_screenshots_to_drive/entry.js"
+  props:
+    google_drive:
+      authProvisionId: apn_mnh5B9x
+    screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
+    nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
+    messageName: "{{steps.trigger.event.body.name}}"
+
+# --- Filter: Proof/Slack tag + weekday gate ---
+- namespace: filter
+  runtime: nodejs20.x
+  uses: "./filter/entry.js"
+  props:
+    _filter:
+      continue: 'true'
+      rules:
+        t: and
+        r:
+        - a: "{{JSON.stringify(steps.trigger.event.body.tags)}}"
+          op: str/
+          b: Proof/Slack
+        - a: "{{[0, 6].includes(new Date(steps.trigger.context.ts).getDay())}}"
+          op: 'false'
+          b: 'false'
+
+# --- Newsletter approval (disabled until auth + catalog ready) ---
+- namespace: lookup_newsletter_run
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./lookup_newsletter_run/entry.js"
+
+- namespace: post_and_suspend
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./post_and_suspend/entry.js"
+
+- namespace: apply_decision
+  disabled: true
+  runtime: nodejs20.x
+  uses: "./apply_decision/entry.js"
