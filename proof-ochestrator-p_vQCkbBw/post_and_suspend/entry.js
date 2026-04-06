@@ -119,26 +119,39 @@ export default defineComponent({
     },
   },
   async run({ steps, $ }) {
-    const run = steps.lookup_newsletter_run?.$return_value;
+    const config = steps.check_config?.$return_value;
+    const contentPrep = steps.suspend_for_content_prep?.$return_value;
     const body = steps.trigger.event.body;
     const screenshots =
       steps.extract_screenshots?.$return_value?.screenshots || [];
 
-    // Non-newsletter proof → behave like the existing plain-message flow
-    if (!run) {
+    // Non-newsletter proof → skip
+    if (!config || !contentPrep?.triggered) {
       $.export(
         "$summary",
-        "No newsletter run — skipping Block Kit post (non-newsletter proof)"
+        "No newsletter config — skipping Block Kit post (non-newsletter proof)"
       );
       return { posted: false, reason: "no_newsletter_run" };
     }
 
+    // Build a run object from check_config + content-prep resume data
+    // Content-prep resume body: { status, run_id, newsletter_key, ai_subject, ai_intro }
+    const contentPrepResume = $.context?.resume_history?.[0]?.body || {};
+    const run = {
+      run_id: contentPrepResume.run_id || "unknown",
+      newsletter_key: config.newsletter_key,
+      braze_catalog_id: config.braze_catalog_id,
+      ai_subject: contentPrepResume.ai_subject || "",
+      ai_intro: contentPrepResume.ai_intro || "",
+      next_send_time: body.next_send_time,
+    };
+
     // Compute suspend timeout = (next_send_time - CUTOFF - now), in ms
-    const sendTs = new Date(body.next_send_time || run.next_send_time).getTime();
+    const sendTs = new Date(body.next_send_time).getTime();
     const cutoffMs = sendTs - CUTOFF_MINUTES_BEFORE_SEND * 60 * 1000 - Date.now();
     const timeoutMs = Math.max(cutoffMs, 60 * 1000); // minimum 1 min
 
-    const sendTime = new Date(body.next_send_time || run.next_send_time).toLocaleString("en-US", {
+    const sendTime = new Date(body.next_send_time).toLocaleString("en-US", {
       timeZone: "America/New_York",
       dateStyle: "medium",
       timeStyle: "short",
@@ -146,8 +159,8 @@ export default defineComponent({
 
     // Read AI content fresh from the Braze catalog meta row so we show
     // exactly what the template will use at send time.
-    let aiSubject = run.ai_subject || "";
-    let aiIntro = run.ai_intro || "";
+    let aiSubject = run.ai_subject;
+    let aiIntro = run.ai_intro;
     try {
       const metaResp = await axios($, {
         method: "GET",
@@ -176,7 +189,7 @@ export default defineComponent({
         "$summary",
         `DRY RUN — would post ${blocks.length} blocks and suspend for ${Math.round(timeoutMs / 60000)} min`
       );
-      return { posted: false, dry_run: true, timeoutMs, blocks };
+      return { posted: false, dry_run: true, run_id: run.run_id, timeoutMs, blocks };
     }
 
     // Suspend the workflow. Pipedream returns resume_url + cancel_url.
@@ -221,6 +234,7 @@ export default defineComponent({
 
     return {
       posted: true,
+      run_id: run.run_id,
       channel: response.channel,
       ts: response.ts,
       timeoutMs,

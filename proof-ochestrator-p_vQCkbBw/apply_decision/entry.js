@@ -41,14 +41,14 @@ export default defineComponent({
     },
   },
   async run({ steps, $ }) {
-    const run = steps.lookup_newsletter_run?.$return_value;
+    const config = steps.check_config?.$return_value;
     const suspendResult = steps.post_and_suspend?.$return_value;
 
-    // If no run or we never actually suspended (dry run / non-newsletter),
+    // If no config or we never actually suspended (dry run / non-newsletter),
     // there's nothing to do.
-    if (!run) {
-      $.export("$summary", "No newsletter run — skipping");
-      return { skipped: true, reason: "no_run" };
+    if (!config) {
+      $.export("$summary", "No newsletter config — skipping");
+      return { skipped: true, reason: "no_config" };
     }
     if (suspendResult?.dry_run) {
       $.export("$summary", "Dry run — not applying decision");
@@ -72,13 +72,20 @@ export default defineComponent({
 
     console.log(`Resolved decision: ${decision || "(none)"} → ${finalStatus}`);
 
+    // Build run info from check_config + post_and_suspend
+    const run = {
+      run_id: suspendResult?.run_id || "unknown",
+      braze_catalog_id: config.braze_catalog_id,
+      newsletter_key: config.newsletter_key,
+    };
+
     // On reject or timeout, clear AI fields from Braze catalog so template
     // falls back to defaults.
     if (finalStatus !== "APPROVED") {
       try {
         await axios($, {
           method: "PATCH",
-          url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/${run.braze_catalog_id || ""}/items`,
+          url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/${run.braze_catalog_id}/items`,
           headers: {
             Authorization: `Bearer ${this.braze.$auth.api_key}`,
             "Content-Type": "application/json",

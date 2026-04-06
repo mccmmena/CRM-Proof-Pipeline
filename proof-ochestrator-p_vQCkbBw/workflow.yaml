@@ -75,13 +75,6 @@ steps:
         - a: "{{[0, 6].includes(new Date(steps.trigger.context.ts).getDay())}}"
           op: 'false'
           b: 'false'
-- namespace: lookup_newsletter_run
-  disabled: true
-  runtime: nodejs20.x
-  uses: "./lookup_newsletter_run/entry.js"
-  props:
-    snowflake:
-      authProvisionId: apn_yghdQYJ
 - namespace: post_and_suspend
   disabled: true
   runtime: nodejs20.x
