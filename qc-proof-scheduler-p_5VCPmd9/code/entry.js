@@ -31,10 +31,18 @@ export default {
 
     for (const item of items) {
         try {
+            // Compute delay: minutes until 1 hour before send time
+            let delay_minutes = 0;
+            if (item.next_send_time) {
+              const sendMs = new Date(item.next_send_time).getTime();
+              const oneHourBeforeMs = sendMs - 60 * 60 * 1000;
+              delay_minutes = Math.max(0, Math.round((oneHourBeforeMs - Date.now()) / 60000));
+            }
+
             await axios($, {
                 method: "POST",
                 url: workflowUrl,
-                data: item,
+                data: { ...item, delay_minutes },
             });
             successCount++;
         } catch (error) {
