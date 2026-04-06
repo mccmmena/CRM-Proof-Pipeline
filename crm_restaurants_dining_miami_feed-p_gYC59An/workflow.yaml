@@ -1,0 +1,60 @@
+schema: workflow/2022.04
+name: crm_restaurants_dining_miami_feed
+settings:
+  error_notification: true
+steps:
+- namespace: get_stories
+  runtime: nodejs20.x
+  uses: "./get_stories/entry.js"
+  props:
+    limit: 20
+- namespace: json_to_csv
+  runtime: nodejs20.x
+  uses: "./json_to_csv/entry.js"
+  props:
+    items: "{{steps.get_stories.$return_value}}"
+- namespace: create_braze_catalog
+  runtime: nodejs20.x
+  uses: "@mcclatchy/create_braze_catalog@0.0.9"
+  props:
+    fields:
+    - title:string
+    - description:string
+    - url:string
+    - thumbnail:string
+    - thumbnail_alt:string
+    - section_name:string
+    - section_url:string
+    - tags:string
+    - publication_date:time
+    - rank:number
+- namespace: random_selection
+  runtime: nodejs20.x
+  uses: "@mcclatchy/braze-create-catalog-selection@0.0.1"
+  props:
+    catalogName: "{{steps.create_braze_catalog.$return_value.catalogName}}"
+    selectionName: random
+    description: Returns 10 random items
+    filters:
+    - '{"field":"id","operator":"does not equal","value":"0"}'
+    limit: 10
+- namespace: feed_selection
+  runtime: nodejs20.x
+  uses: "@mcclatchy/braze-create-catalog-selection@0.0.1"
+  props:
+    catalogName: "{{steps.create_braze_catalog.$return_value.catalogName}}"
+    selectionName: feed
+    description: Returns 20 items in feed order
+    filters:
+    - '{"field":"id","operator":"does not equal","value":"0"}'
+    limit: 10
+    sortField: rank
+    sortOrder: asc
+- namespace: braze_catalog_update
+  runtime: nodejs20.x
+  uses: "@mcclatchy/braze-catalog-update@0.0.3"
+  props:
+    catalogName: "{{steps.create_braze_catalog.$return_value.catalogName}}"
+    sheetData: "{{steps.json_to_csv.$return_value}}"
+    idField: id
+

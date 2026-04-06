@@ -7,6 +7,13 @@ settings:
 triggers:
 - id: hi_BpHkPLe
 steps:
+- namespace: braze_get_scheduled_messages
+  runtime: nodejs20.x
+  uses: "@mcclatchy/braze-get-scheduled-messages@0.0.1"
+  props:
+    braze:
+      authProvisionId: apn_1Khpe1W
+    endTime: " 2024-04-07T18:00:00Z"
 - namespace: utils_filter_by_tags
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-filter-by-tags@0.0.2"
