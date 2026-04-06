@@ -74,7 +74,7 @@ export default defineComponent({
       const response = await axios($, {
         method: "GET",
         url,
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "User-Agent": "pipedream/1" },
       });
 
       const items = normalizeFeed(response, url);
