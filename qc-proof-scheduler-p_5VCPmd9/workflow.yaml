@@ -29,6 +29,8 @@ steps:
   runtime: nodejs20.x
   uses: google_drive-create-folder@0.1.16
   props:
+    googleDrive:
+      authProvisionId: apn_mnh5B9x
     name: "{{steps.trigger.event.timezone_configured.iso8601.date}}"
     createIfUnique: true
 
