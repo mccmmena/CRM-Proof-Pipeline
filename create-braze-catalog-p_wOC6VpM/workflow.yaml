@@ -5,11 +5,17 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_gKHqOlL
+  custom_response: true
 steps:
+- namespace: validate_and_respond
+  runtime: nodejs20.x
+  uses: "./validate_and_respond/entry.js"
 - namespace: create_braze_catalog
   runtime: nodejs20.x
   uses: "@mcclatchy/create_braze_catalog@0.0.9"
   props:
     braze:
       authProvisionId: apn_6LhOGA9
-
+    catalogName: "{{steps.validate_and_respond.$return_value.catalog_name}}"
+    catalogDescription: "{{steps.validate_and_respond.$return_value.description}}"
+    fields: "{{steps.validate_and_respond.$return_value.fields}}"

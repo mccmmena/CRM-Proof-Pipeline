@@ -75,23 +75,22 @@ export default defineComponent({
     // Build run info from check_config + post_and_suspend
     const run = {
       run_id: suspendResult?.run_id || "unknown",
-      braze_catalog_id: config.braze_catalog_id,
       newsletter_key: config.newsletter_key,
     };
 
-    // On reject or timeout, clear AI fields from Braze catalog so template
-    // falls back to defaults.
+    // On reject or timeout, clear AI fields from the shared content catalog
+    // so the template falls back to defaults.
     if (finalStatus !== "APPROVED") {
       try {
         await axios($, {
           method: "PATCH",
-          url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/${run.braze_catalog_id}/items`,
+          url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/crm_newsletters_content/items`,
           headers: {
             Authorization: `Bearer ${this.braze.$auth.api_key}`,
             "Content-Type": "application/json",
           },
           data: {
-            items: [{ id: "meta", ai_subject: "", ai_intro: "" }],
+            items: [{ id: run.newsletter_key, ai_subject: "", ai_intro: "" }],
           },
         });
       } catch (e) {
