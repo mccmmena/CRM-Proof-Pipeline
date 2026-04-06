@@ -12,18 +12,9 @@ steps:
   props:
     snowflake:
       authProvisionId: apn_yghdQYJ
-- namespace: calc_one_hour_before_send
+- namespace: optional_delay
   runtime: nodejs20.x
-  uses: "./calc_one_hour_before_send/entry.js"
-  props:
-    targetTime: "{{steps.trigger.event.body.next_send_time}}"
-    timezone: America/New_York
-- namespace: workflow_delay
-  runtime: nodejs20.x
-  uses: delay-workflow-delay@0.0.2
-  props:
-    delayDurationValue: "{{steps.calc_one_hour_before_send.$return_value}}"
-    delayDurationUnit: Minutes
+  uses: "./optional_delay/entry.js"
 - namespace: suspend_for_content_prep
   runtime: nodejs20.x
   uses: "./suspend_for_content_prep/entry.js"
