@@ -157,14 +157,14 @@ export default defineComponent({
       timeStyle: "short",
     });
 
-    // Read AI content fresh from the Braze catalog meta row so we show
-    // exactly what the template will use at send time.
+    // Read AI content fresh from the shared crm_newsletters_content catalog
+    // so we show exactly what the template will use at send time.
     let aiSubject = run.ai_subject;
     let aiIntro = run.ai_intro;
     try {
       const metaResp = await axios($, {
         method: "GET",
-        url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/${run.braze_catalog_id || ""}/items/meta`,
+        url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/crm_newsletters_content/items/${run.newsletter_key}`,
         headers: {
           Authorization: `Bearer ${this.braze.$auth.api_key}`,
         },
@@ -172,7 +172,7 @@ export default defineComponent({
       aiSubject = metaResp?.item?.ai_subject || aiSubject;
       aiIntro = metaResp?.item?.ai_intro || aiIntro;
     } catch (e) {
-      console.warn("Could not fetch meta row from Braze, using Snowflake values:", e.message);
+      console.warn("Could not fetch from crm_newsletters_content, using callback values:", e.message);
     }
 
     if (this.dry_run || !this.approval_channel) {

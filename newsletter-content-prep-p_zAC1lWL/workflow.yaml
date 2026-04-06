@@ -66,13 +66,21 @@ steps:
       - "{{steps.load_config.$return_value.next_send_time}}"
       - "{{JSON.stringify(steps.fetch_feed.$return_value.stories)}}"
 
-# --- Braze catalog: upsert story slots ---
-- namespace: upsert_slot_rows
+# --- Convert stories to CSV for catalog update ---
+- namespace: json_to_csv
   runtime: nodejs20.x
-  uses: "./upsert_slot_rows/entry.js"
+  uses: "./json_to_csv/entry.js"
+
+# --- Bulk update per-newsletter stories catalog ---
+- namespace: braze_catalog_update
+  runtime: nodejs20.x
+  uses: "@mcclatchy/braze-catalog-update@0.0.3"
   props:
     braze:
       authProvisionId: apn_6LhOGA9
+    catalogName: "{{steps.load_config.$return_value.braze_catalog_id}}"
+    sheetData: "{{steps.json_to_csv.$return_value}}"
+    idField: id
 
 # --- OpenAI: generate subject + intro ---
 - namespace: generate_ai_content
@@ -82,7 +90,7 @@ steps:
     openai:
       authProvisionId: apn_QPhO4kd
 
-# --- Braze catalog: upsert meta row with AI ---
+# --- Upsert AI content to shared crm_newsletters_content catalog ---
 - namespace: upsert_meta_row
   runtime: nodejs20.x
   uses: "./upsert_meta_row/entry.js"

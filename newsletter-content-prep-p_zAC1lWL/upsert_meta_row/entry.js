@@ -1,4 +1,5 @@
-// Upsert the catalog "meta" row with AI subject + intro and run metadata.
+// Upsert AI content into the shared crm_newsletters_content catalog.
+// One row per newsletter, keyed by newsletter_key.
 
 import { axios } from "@pipedream/platform";
 
@@ -10,12 +11,12 @@ export default defineComponent({
     },
   },
   async run({ steps, $ }) {
-    const { braze_catalog_id } = steps.load_config.$return_value;
+    const { newsletter_key } = steps.load_config.$return_value;
     const { run_id } = steps.write_run_history.$return_value;
     const { ai_subject, ai_intro } = steps.generate_ai_content.$return_value;
 
-    const metaItem = {
-      id: "meta",
+    const item = {
+      id: newsletter_key,
       ai_subject,
       ai_intro,
       run_id,
@@ -24,17 +25,17 @@ export default defineComponent({
 
     const response = await axios($, {
       method: "PUT",
-      url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/${braze_catalog_id}/items`,
+      url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/crm_newsletters_content/items`,
       headers: {
         Authorization: `Bearer ${this.braze.$auth.api_key}`,
         "Content-Type": "application/json",
       },
-      data: { items: [metaItem] },
+      data: { items: [item] },
     });
 
     $.export(
       "$summary",
-      `Upserted meta row with AI content for run ${run_id}`
+      `Upserted AI content for ${newsletter_key} into crm_newsletters_content`
     );
     return { response };
   },
