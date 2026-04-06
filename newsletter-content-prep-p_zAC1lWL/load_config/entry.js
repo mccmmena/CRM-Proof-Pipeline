@@ -3,9 +3,11 @@
 //
 // Expects trigger body: { newsletter_key, next_send_time }
 //
-// Returns: { newsletter_key, display_name, json_feed_url, braze_catalog_id,
+// Returns: { newsletter_key, display_name, feed_sources, braze_catalog_id,
 //            max_stories, slack_channel_id, approvers, ai_prompt_template,
 //            ai_model, next_send_time }
+//
+// feed_sources is an array of { url, count, label? } — see fetch_feed.
 
 export default defineComponent({
   props: {
@@ -32,7 +34,7 @@ export default defineComponent({
       SELECT
         NEWSLETTER_KEY,
         DISPLAY_NAME,
-        JSON_FEED_URL,
+        FEED_SOURCES,
         BRAZE_CATALOG_ID,
         MAX_STORIES,
         SLACK_CHANNEL_ID,
@@ -59,16 +61,36 @@ export default defineComponent({
     }
 
     const row = rows[0];
+
+    // FEED_SOURCES is a Snowflake VARIANT — the snowflake-sdk driver returns
+    // VARIANT values as strings of JSON, so parse defensively. If it's
+    // already an array/object (some drivers auto-parse), pass it through.
+    let feed_sources = row.FEED_SOURCES;
+    if (typeof feed_sources === "string") {
+      try {
+        feed_sources = JSON.parse(feed_sources);
+      } catch (e) {
+        throw new Error(
+          `FEED_SOURCES for ${newsletter_key} is not valid JSON: ${e.message}`
+        );
+      }
+    }
+    if (!Array.isArray(feed_sources) || feed_sources.length === 0) {
+      throw new Error(
+        `FEED_SOURCES for ${newsletter_key} must be a non-empty array`
+      );
+    }
+
     const config = {
       newsletter_key: row.NEWSLETTER_KEY,
       display_name: row.DISPLAY_NAME,
-      json_feed_url: row.JSON_FEED_URL,
+      feed_sources,
       braze_catalog_id: row.BRAZE_CATALOG_ID,
       max_stories: row.MAX_STORIES || 5,
       slack_channel_id: row.SLACK_CHANNEL_ID,
       approvers: row.APPROVERS || [],
       ai_prompt_template: row.AI_PROMPT_TEMPLATE || null,
-      ai_model: row.AI_MODEL || "gpt-4o-mini",
+      ai_model: row.AI_MODEL || "gpt-5.4-mini",
       next_send_time,
     };
 
