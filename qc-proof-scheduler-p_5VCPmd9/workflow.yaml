@@ -12,7 +12,7 @@ steps:
   uses: "./braze_get_scheduled_messages/entry.js"
   props:
     braze:
-      authProvisionId: apn_1Khpe1W
+      authProvisionId: apn_0WhgpWJ
     endTime: "{{new Date(Date.now() + 24*60*60*1000).toISOString()}}"
 - namespace: utils_filter_by_tags
   runtime: nodejs20.x

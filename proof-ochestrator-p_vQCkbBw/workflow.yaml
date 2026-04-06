@@ -2,6 +2,8 @@ schema: workflow/2022.04
 name: Proof Ochestrator
 settings:
   error_notification: true
+  lambda_memory: 1024
+  lambda_timeout: 240
   network: net_5Lnie3
 triggers:
 - id: hi_MWHpn8Z
