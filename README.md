@@ -34,10 +34,8 @@ Locks stories into a Braze catalog, generates AI subject/intro, writes history t
 - **`newsletter-content-prep-p_zAC1lWL/`** — per-newsletter prep. Reads per-newsletter config from Snowflake (supports multi-feed via `FEED_SOURCES` VARIANT column), fetches story feeds, inserts a `NEWSLETTER_RUNS` row (UUID via `UUID_STRING()`), upserts `slot_1..slot_N` rows into the Braze catalog, calls OpenAI to generate `ai_subject` + `ai_intro`, upserts the `meta` row with the AI content, and writes it all to Snowflake history. Then exits — no waiting. The approval wait happens later in the orchestrator.
 - **SQL DDL:** `newsletter-content-prep-p_zAC1lWL/sql/schema.sql` — `NEWSLETTER_CONFIG` and `NEWSLETTER_RUNS` table definitions. Tables live in `MCC_RAW.MARKETING_DEV`.
 
-### Placeholders / inactive
+### Inactive
 
-- **`feed-sync-p_yKCmLGq/`** — stub.
-- **`qc-proof-pipeline-p_7NCyxw2/`** — inactive. All logic moved to `proof-ochestrator`. Entry.js files retained for reference.
 - **`qc-slack-approval-p_JZCz5G5/`** — legacy Slack message viewer (inactive).
 
 ---
