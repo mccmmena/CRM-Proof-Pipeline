@@ -16,8 +16,7 @@ Composable HTTP-triggered workflows that other workflows can call via callback.
 
 Per-campaign QC: sends test emails ~1 hour before send time, generates cross-client screenshots, and (for newsletters) posts an approval message to Slack.
 
-- **`qc-proof-scheduler-p_5VCPmd9/`** — cron-style scheduler. Fetches today's scheduled Braze messages, filters by the `Proof` tag, and POSTs each item to the proof orchestrator.
-- **`proof-ochestrator-p_vQCkbBw/`** — per-campaign router. Checks `NEWSLETTER_CONFIG` in Snowflake: if the campaign name matches an enabled newsletter, triggers `newsletter-content-prep` first, then always triggers `qc-proof-pipeline`.
+- **`qc-proof-scheduler-p_5VCPmd9/`** — cron-style scheduler. Fetches today's scheduled Braze messages, filters by the `Proof` tag, and fans out. The `route_and_trigger` step (disabled by default) also checks `NEWSLETTER_CONFIG` for each matching campaign and fires `newsletter-content-prep` alongside the proof pipeline.
 - **`qc-proof-pipeline-p_7NCyxw2/`** — per-campaign pipeline. Delays until T-1h, sends a test email through Braze, waits 10 min, pulls EOA screenshots, uploads to Google Drive (`YYYY-MM-DD/{campaign}/`), then posts to Slack. For newsletter campaigns, the `post_and_suspend` step calls `$.flow.suspend()` and posts a Block Kit message with Approve/Reject URL buttons. When a button is clicked (or the timeout fires at T-10m), `apply_decision` runs.
 - **`qc-slack-approval-p_JZCz5G5/`** — legacy Slack message viewer (inactive). Retained for backwards compatibility; the new approval flow uses `$.flow.suspend` inside the proof pipeline and does not depend on this workflow.
 
@@ -31,6 +30,7 @@ Locks stories into a Braze catalog, generates AI subject/intro, writes history t
 ### Placeholders / inactive
 
 - **`feed-sync-p_yKCmLGq/`** — stub.
+- **`proof-ochestrator-p_vQCkbBw/`** — stub.
 
 ---
 
@@ -39,11 +39,8 @@ Locks stories into a Braze catalog, generates AI subject/intro, writes history t
 ```mermaid
 flowchart TD
   cron[qc-proof-scheduler cron] --> filter{Filter by Proof tag}
-  filter --> orch[proof-ochestrator]
-  orch --> configcheck{NEWSLETTER_CONFIG match?}
-  configcheck -->|yes| prep[newsletter-content-prep]
-  configcheck -->|no| proof[qc-proof-pipeline]
-  prep --> proof
+  filter -->|newsletter match| prep[newsletter-content-prep]
+  filter -->|all matches| proof[qc-proof-pipeline]
 
   prep --> fetchfeed[Fetch JSON feed]
   fetchfeed --> snowhist[INSERT NEWSLETTER_RUNS]
@@ -153,18 +150,16 @@ curl -s -H "Authorization: Bearer $PIPEDREAM_API_KEY" \
 | `email-test-api` | ✅ Production, end-to-end verified |
 | `braze-render` + `braze-email-capture` | ✅ Production, end-to-end verified |
 | `qc-proof-scheduler` / `qc-proof-pipeline` (classic proof path) | ✅ Pre-existing, currently inactive |
-| `proof-ochestrator` | 🚧 Scaffolded, needs `content_prep_url` and `proof_pipeline_url` props set in Pipedream UI |
-| `newsletter-content-prep` | 🚧 Scaffolded, Snowflake tables created, Trailhead pilot row seeded (ENABLED=FALSE) |
+| `newsletter-content-prep` | 🚧 Scaffolded, needs Snowflake tables seeded |
 | `qc-proof-pipeline` newsletter steps (`lookup_newsletter_run`, `post_and_suspend`, `apply_decision`) | 🚧 Scaffolded, disabled |
 
 Before enabling the newsletter flow end-to-end:
-1. ~~Run the DDL at `newsletter-content-prep-p_zAC1lWL/sql/schema.sql`~~ Done
-2. ~~Seed at least one pilot row in `NEWSLETTER_CONFIG`~~ Done (Trailhead, ENABLED=FALSE)
+1. Run the DDL at `newsletter-content-prep-p_zAC1lWL/sql/schema.sql`
+2. Seed at least one pilot row in `NEWSLETTER_CONFIG`
 3. Create the corresponding Braze catalog (with the `meta` row and `slot_1..N` item IDs)
-4. Set `content_prep_url` and `proof_pipeline_url` props on `proof-ochestrator` steps in the Pipedream UI
-5. Set the Slack approval channel on `post_and_suspend` and flip `dry_run` to false
-6. Enable the `lookup_newsletter_run` / `post_and_suspend` / `apply_decision` steps in `qc-proof-pipeline/workflow.yaml`
-7. `UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG SET ENABLED = TRUE WHERE NEWSLETTER_KEY = 'crm_trailhead_nonsubnl'`
+4. Set the Slack approval channel on `post_and_suspend` and flip `dry_run` to false
+5. Enable the `lookup_newsletter_run` / `post_and_suspend` / `apply_decision` steps in `qc-proof-pipeline/workflow.yaml`
+6. Enable the `route_and_trigger` step in `qc-proof-scheduler/workflow.yaml`
 
 ---
 

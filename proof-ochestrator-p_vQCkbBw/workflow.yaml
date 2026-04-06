@@ -2,19 +2,6 @@ schema: workflow/2022.04
 name: Proof Ochestrator
 settings:
   error_notification: true
-  network: net_5Lnie3
 triggers:
 - id: hi_MWHpn8Z
-steps:
-- namespace: check_config
-  runtime: nodejs20.x
-  uses: "./check_config/entry.js"
-  props:
-    snowflake:
-      authProvisionId: apn_yghdQYJ
-- namespace: trigger_content_prep
-  runtime: nodejs20.x
-  uses: "./trigger_content_prep/entry.js"
-- namespace: trigger_proof_pipeline
-  runtime: nodejs20.x
-  uses: "./trigger_proof_pipeline/entry.js"
+
