@@ -93,7 +93,6 @@ Timing summary:
 | T-1h | Orchestrator resumes from delay |
 | T-1h | **Suspend 1:** content-prep locks stories + generates AI (if newsletter) |
 | ~T-50m | **Suspend 2:** braze-render renders Liquid via Braze |
-| ~T-55m | **Suspend 2:** email-test-api creates EOA test, polls for screenshots |
 | ~T-40m | **Suspend 3:** email-test-api creates EOA test, polls for screenshots |
 | ~T-30m | Screenshots uploaded to Drive |
 | ~T-30m | **Suspend 4:** Slack approval message posted (if newsletter + weekday) |
