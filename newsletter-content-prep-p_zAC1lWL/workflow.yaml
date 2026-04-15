@@ -15,10 +15,12 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: SELECT NEWSLETTER_KEY, DISPLAY_NAME, FEED_SOURCES, BRAZE_CATALOG_ID,
+      query: >-
+        SELECT NEWSLETTER_KEY, DISPLAY_NAME, FEED_SOURCES, BRAZE_CATALOG_ID,
         MAX_STORIES, SLACK_CHANNEL_ID, APPROVERS, AI_PROMPT_TEMPLATE, AI_MODEL, ENABLED
-        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG WHERE NEWSLETTER_KEY = :1 AND
-        ENABLED = TRUE LIMIT 1
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
+        WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
+        LIMIT 1
       params:
       - "{{steps.trigger.event.body.newsletter_key}}"
 - namespace: load_config
@@ -34,7 +36,8 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: SELECT UUID_STRING() AS RUN_ID
+      query: >-
+        SELECT UUID_STRING() AS RUN_ID
 - namespace: write_run_history
   runtime: nodejs20.x
   uses: "./write_run_history/entry.js"
@@ -45,9 +48,10 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS (RUN_ID, NEWSLETTER_KEY,
-        NEXT_SEND_TIME, PREP_STARTED_AT, STORIES, DECISION) SELECT :1, :2, :3, CURRENT_TIMESTAMP(),
-        PARSE_JSON(:4), 'PENDING'
+      query: >-
+        INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
+        (RUN_ID, NEWSLETTER_KEY, NEXT_SEND_TIME, PREP_STARTED_AT, STORIES, DECISION)
+        SELECT :1, :2, :3, CURRENT_TIMESTAMP(), PARSE_JSON(:4), 'PENDING'
       params:
       - "{{steps.write_run_history.$return_value.run_id}}"
       - "{{steps.load_config.$return_value.newsletter_key}}"
@@ -84,8 +88,11 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      query: UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS SET AI_SUBJECT = :1, AI_INTRO
-        = :2, AI_MODEL = :3, AI_RAW_RESPONSE = PARSE_JSON(:4) WHERE RUN_ID = :5
+      query: >-
+        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
+        SET AI_SUBJECT = :1, AI_INTRO = :2, AI_MODEL = :3,
+        AI_RAW_RESPONSE = PARSE_JSON(:4)
+        WHERE RUN_ID = :5
       params:
       - "{{steps.generate_ai_content.$return_value.ai_subject}}"
       - "{{steps.generate_ai_content.$return_value.ai_intro}}"
