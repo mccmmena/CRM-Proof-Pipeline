@@ -46,6 +46,6 @@ export default defineComponent({
     });
 
     $.export("$summary", `Suspended — waiting for email-test-api callback`);
-    return { subject, waiting_for: "email_test_api" };
+    return { subject, rendered_html, waiting_for: "email_test_api" };
   },
 });

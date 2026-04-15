@@ -64,21 +64,15 @@ steps:
     screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
     messageName: "{{steps.trigger.event.body.name}}"
+- namespace: verify_proof
+  runtime: nodejs20.x
+  uses: "./verify_proof/entry.js"
+  props:
+    openai:
+      authProvisionId: apn_QPhO4kd
 - namespace: filter
   runtime: nodejs20.x
   uses: "./filter/entry.js"
-  props:
-    _filter:
-      continue: 'true'
-      rules:
-        t: and
-        r:
-        - a: "{{JSON.stringify(steps.trigger.event.body.tags)}}"
-          op: str/
-          b: Proof/Slack
-        - a: "{{[0, 6].includes(new Date(steps.trigger.context.ts).getDay())}}"
-          op: 'false'
-          b: 'false'
 - namespace: post_and_suspend
   disabled: true
   runtime: nodejs20.x

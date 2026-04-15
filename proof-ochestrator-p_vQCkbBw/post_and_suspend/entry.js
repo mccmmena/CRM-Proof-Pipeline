@@ -26,7 +26,7 @@ import { axios } from "@pipedream/platform";
 
 const CUTOFF_MINUTES_BEFORE_SEND = 10;
 
-function buildBlocks({ run, aiSubject, aiIntro, sendTime, screenshots, approveUrl, rejectUrl }) {
+function buildBlocks({ run, aiSubject, aiIntro, sendTime, screenshots, approveUrl, rejectUrl, verifyResult }) {
   const blocks = [
     {
       type: "header",
@@ -55,6 +55,25 @@ function buildBlocks({ run, aiSubject, aiIntro, sendTime, screenshots, approveUr
   }
 
   blocks.push({ type: "divider" });
+
+  // Verification issues (from verify_proof step)
+  if (verifyResult?.issues?.length > 0) {
+    const severityIcon = { high: ":red_circle:", medium: ":warning:", low: ":white_circle:" };
+    const issueLines = verifyResult.issues
+      .map((i) => `${severityIcon[i.severity] || ":warning:"} [${i.type}] ${i.description}`)
+      .join("\n");
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `*Issues Found:*\n${issueLines}` },
+    });
+    if (verifyResult.summary) {
+      blocks.push({
+        type: "context",
+        elements: [{ type: "mrkdwn", text: `_AI Assessment: ${verifyResult.summary}_` }],
+      });
+    }
+    blocks.push({ type: "divider" });
+  }
 
   if (screenshots && screenshots.length > 0) {
     const links = screenshots
@@ -124,6 +143,7 @@ export default defineComponent({
     const body = steps.trigger.event.body;
     const screenshots =
       steps.extract_screenshots?.$return_value?.screenshots || [];
+    const verifyResult = steps.verify_proof?.$return_value;
 
     // Non-newsletter proof → skip
     if (!config || !contentPrep?.triggered) {
@@ -184,6 +204,7 @@ export default defineComponent({
         screenshots,
         approveUrl: "https://example.invalid/approve",
         rejectUrl: "https://example.invalid/reject",
+        verifyResult,
       });
       $.export(
         "$summary",
@@ -207,6 +228,7 @@ export default defineComponent({
       screenshots,
       approveUrl,
       rejectUrl,
+      verifyResult,
     });
 
     const response = await axios($, {
