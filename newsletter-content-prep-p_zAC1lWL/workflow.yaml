@@ -42,10 +42,8 @@ steps:
     snowflake:
       authProvisionId: apn_yghdQYJ
     sql:
-      value: |-
-        SELECT UUID_STRING() AS RUN_ID
-      query: |-
-        SELECT UUID_STRING() AS RUN_ID
+      value: SELECT UUID_STRING() AS RUN_ID
+      query: SELECT UUID_STRING() AS RUN_ID
       params: []
 - namespace: write_run_history
   runtime: nodejs20.x
@@ -82,12 +80,22 @@ steps:
     catalogName: "{{steps.load_config.$return_value.braze_catalog_id}}"
     sheetData: "{{steps.json_to_csv.$return_value}}"
     idField: id
-- namespace: generate_ai_content
+- namespace: ghostwriter
   runtime: nodejs20.x
-  uses: "./generate_ai_content/entry.js"
+  uses: "./ghostwriter/entry.js"
   props:
-    openai:
-      authProvisionId: apn_QPhO4kd
+    elvex_api_key:
+      _enc: c26a1e7f5b4a880668f1bea535c1e53093c16328063b11e18c93b019a4429a65$$UunFCYzLfa39OVUJWCVLZW6sn5z8W/WeB8dQB96LFvq3XLMk11/0SG4WI2HilQ2Neu9MVf67dTfrxTEJy8noHRvjYlDnuUit+BRB/yZBAkE06ixjrA==--DJh7SVRjK/mushyJ--v7bw/jA3A3R9DGjPzKk7IA==
+    assistant_id: 39JKVUD02DfsD3222ox6NADElOc
+    version: 8
+    prompt: "Always respond in valid JSON. Do not include any text before or after
+      the JSON block.\n\nGive me Sam's take on the below stories. can you make the
+      subject line Sentence Case? \n{{JSON.stringify(steps.json_to_csv.$return_value)}}\n\nreturn
+      it as json in the format:\n{\nai_subject: string\nai_intro: string\nai_description:
+      string\n}"
+- namespace: parse_ghostwriter
+  runtime: nodejs20.x
+  uses: "./parse_ghostwriter/entry.js"
 - namespace: upsert_meta_row
   runtime: nodejs20.x
   uses: "./upsert_meta_row/entry.js"

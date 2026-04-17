@@ -26,7 +26,8 @@ steps:
         WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
         LIMIT 1
       params:
-      - "{{steps.trigger.event.body.name || steps.trigger.event.body.campaign_name || steps.trigger.event.body.canvas_name}}"
+      - "{{steps.trigger.event.body.name || steps.trigger.event.body.campaign_name
+        || steps.trigger.event.body.canvas_name}}"
 - namespace: check_config
   runtime: nodejs20.x
   uses: "./check_config/entry.js"

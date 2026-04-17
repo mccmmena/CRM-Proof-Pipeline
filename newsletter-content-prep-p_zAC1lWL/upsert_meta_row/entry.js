@@ -13,7 +13,7 @@ export default defineComponent({
   async run({ steps, $ }) {
     const { newsletter_key } = steps.load_config.$return_value;
     const { run_id } = steps.write_run_history.$return_value;
-    const { ai_subject, ai_intro } = steps.generate_ai_content.$return_value;
+    const { ai_subject, ai_intro } = steps.parse_ghostwriter.$return_value;
 
     const item = {
       id: newsletter_key,
