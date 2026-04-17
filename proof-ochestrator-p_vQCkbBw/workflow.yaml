@@ -16,12 +16,12 @@ steps:
       authProvisionId: apn_yghdQYJ
     sql:
       value: |-
-        SELECT NEWSLETTER_KEY, DISPLAY_NAME, BRAZE_CATALOG_ID
+        SELECT NEWSLETTER_KEY, DISPLAY_NAME, BRAZE_CATALOG_ID, SLACK_CHANNEL_ID
         FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
         WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
         LIMIT 1
       query: |-
-        SELECT NEWSLETTER_KEY, DISPLAY_NAME, BRAZE_CATALOG_ID
+        SELECT NEWSLETTER_KEY, DISPLAY_NAME, BRAZE_CATALOG_ID, SLACK_CHANNEL_ID
         FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
         WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
         LIMIT 1
@@ -80,13 +80,11 @@ steps:
   runtime: nodejs20.x
   uses: "./filter/entry.js"
 - namespace: post_and_suspend
-  disabled: true
   runtime: nodejs20.x
   uses: "./post_and_suspend/entry.js"
   props:
-    dry_run: true
+    dry_run: false
 - namespace: apply_decision
-  disabled: true
   runtime: nodejs20.x
   uses: "./apply_decision/entry.js"
 

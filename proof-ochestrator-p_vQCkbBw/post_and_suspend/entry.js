@@ -26,7 +26,7 @@ import { axios } from "@pipedream/platform";
 
 const CUTOFF_MINUTES_BEFORE_SEND = 10;
 
-function buildBlocks({ run, aiSubject, aiIntro, sendTime, screenshots, approveUrl, rejectUrl, verifyResult }) {
+function buildBlocks({ run, aiSubject, aiIntro, sendTime, driveFiles, approveUrl, rejectUrl, verifyResult }) {
   const blocks = [
     {
       type: "header",
@@ -56,7 +56,7 @@ function buildBlocks({ run, aiSubject, aiIntro, sendTime, screenshots, approveUr
 
   blocks.push({ type: "divider" });
 
-  // Verification issues (from verify_proof step)
+  // Verification results (from verify_proof step)
   if (verifyResult?.issues?.length > 0) {
     const severityIcon = { high: ":red_circle:", medium: ":warning:", low: ":white_circle:" };
     const issueLines = verifyResult.issues
@@ -66,19 +66,27 @@ function buildBlocks({ run, aiSubject, aiIntro, sendTime, screenshots, approveUr
       type: "section",
       text: { type: "mrkdwn", text: `*Issues Found:*\n${issueLines}` },
     });
-    if (verifyResult.summary) {
-      blocks.push({
-        type: "context",
-        elements: [{ type: "mrkdwn", text: `_AI Assessment: ${verifyResult.summary}_` }],
-      });
-    }
-    blocks.push({ type: "divider" });
+  } else {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `:large_green_circle: *Proof passed automated QC* — no rendering issues detected` },
+    });
   }
 
-  if (screenshots && screenshots.length > 0) {
-    const links = screenshots
+  if (verifyResult?.summary) {
+    blocks.push({
+      type: "context",
+      elements: [{ type: "mrkdwn", text: `_AI Assessment: ${verifyResult.summary}_` }],
+    });
+  }
+
+  blocks.push({ type: "divider" });
+
+  // Screenshots from Google Drive
+  if (driveFiles && driveFiles.length > 0) {
+    const links = driveFiles
       .slice(0, 10)
-      .map((s) => `<${s.url}|${s.client}>`)
+      .map((f) => `<https://drive.google.com/uc?export=view&id=${f.id}|${f.client || f.name}>`)
       .join(" · ");
     blocks.push({
       type: "section",
@@ -141,8 +149,8 @@ export default defineComponent({
     const config = steps.check_config?.$return_value;
     const contentPrep = steps.suspend_for_content_prep?.$return_value;
     const body = steps.trigger.event.body;
-    const screenshots =
-      steps.extract_screenshots?.$return_value?.screenshots || [];
+    const driveFiles =
+      steps.upload_multiple_screenshots_to_drive?.$return_value?.uploadedFiles || [];
     const verifyResult = steps.verify_proof?.$return_value;
 
     // Non-newsletter proof → skip
@@ -195,13 +203,14 @@ export default defineComponent({
       console.warn("Could not fetch from crm_newsletters_content, using callback values:", e.message);
     }
 
-    if (this.dry_run || !this.approval_channel) {
+    const channel = config.slack_channel_id || this.approval_channel;
+    if (this.dry_run || !channel) {
       const blocks = buildBlocks({
         run,
         aiSubject,
         aiIntro,
         sendTime,
-        screenshots,
+        driveFiles,
         approveUrl: "https://example.invalid/approve",
         rejectUrl: "https://example.invalid/reject",
         verifyResult,
@@ -225,7 +234,7 @@ export default defineComponent({
       aiSubject,
       aiIntro,
       sendTime,
-      screenshots,
+      driveFiles,
       approveUrl,
       rejectUrl,
       verifyResult,
@@ -239,7 +248,7 @@ export default defineComponent({
         "Content-Type": "application/json; charset=utf-8",
       },
       data: {
-        channel: this.approval_channel,
+        channel,
         text: `Proof ready for ${run.newsletter_key}`,
         blocks,
       },

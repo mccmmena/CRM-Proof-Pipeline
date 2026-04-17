@@ -26,6 +26,7 @@ export default defineComponent({
       newsletter_key: row.NEWSLETTER_KEY,
       display_name: row.DISPLAY_NAME,
       braze_catalog_id: row.BRAZE_CATALOG_ID,
+      slack_channel_id: row.SLACK_CHANNEL_ID,
     };
   },
 });
