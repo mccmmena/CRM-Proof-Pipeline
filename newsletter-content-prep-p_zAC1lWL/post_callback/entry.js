@@ -13,7 +13,7 @@ export default defineComponent({
     }
 
     const run = steps.write_run_history.$return_value;
-    const ai = steps.generate_ai_content.$return_value;
+    const ai = steps.parse_ghostwriter.$return_value;
     const config = steps.load_config.$return_value;
 
     const payload = {

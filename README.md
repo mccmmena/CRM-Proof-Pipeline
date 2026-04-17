@@ -11,28 +11,30 @@ Composable HTTP-triggered workflows that other workflows can call via callback.
 - **`email-test-api-p_WxCpReW/`** — POST `{ html_body, callback_url }` → submits the HTML directly to Email on Acid, polls for completion with `$.flow.rerun`, POSTs screenshots to the callback URL. Works in ~3-7 minutes (no Braze round-trip, no subject-based search). Used for email QA and can be called by any workflow or tool (including Claude) to validate rendered HTML.
 - **`braze-render-p_vQCkbQW/`** — POST `{ liquid, callback_url }` → sends the Liquid through Braze to a dedicated Pipedream email address. Braze renders the Liquid. The rendered HTML is captured by `braze-email-capture` and POSTed back to the callback URL. Used when you need to render Liquid/personalization before testing.
 - **`braze-email-capture-p_ZJCr8lx/`** — internal email-triggered workflow paired with `braze-render`. Receives the rendered email from Braze, looks up the callback URL in a shared data store (`ds_7QundV5`) keyed by subject, and POSTs the rendered HTML to the caller.
+- **`create-braze-catalog-p_wOC6VpM/`** — POST `{ catalog_name }` → creates a Braze catalog with default newsletter fields (story fields + `ai_subject`, `ai_intro`, `run_id`, `generated_at`). Uses `@mcclatchy/create_braze_catalog@0.0.9`. Returns HTTP 202 immediately.
 
 ### Proof orchestrator
 
-Per-campaign QC orchestration: checks newsletter config, triggers content-prep, delays until T-1h, renders Liquid via braze-render, gets screenshots via email-test-api, uploads to Google Drive, and (for newsletters) posts a Slack approval message.
+Per-campaign QC orchestration: checks newsletter config, triggers content-prep, renders Liquid via braze-render, gets screenshots via email-test-api, uploads to Google Drive, runs AI proof verification, and (for newsletters) posts a Slack approval message.
 
 - **`qc-proof-scheduler-p_5VCPmd9/`** — cron-style scheduler. Fetches today's scheduled Braze messages, filters by the `Proof` tag, and POSTs each item to the proof orchestrator.
 - **`proof-ochestrator-p_vQCkbBw/`** — the main per-campaign workflow. For each Braze item:
-  1. Checks `NEWSLETTER_CONFIG` in Snowflake
-  2. Delays until T-1h via `$.flow.delay`
+  1. Checks `NEWSLETTER_CONFIG` in Snowflake (built-in Snowflake query + JS processing)
+  2. Optional delay (configurable `delay_minutes` prop)
   3. If newsletter match: **suspends** and calls `newsletter-content-prep` with `resume_url` as callback. Resumes when content-prep finishes (stories locked, AI generated).
   4. Rebuilds the Braze message to extract the Liquid template
   5. **Suspends** and calls braze-render with the `resume_url` as callback. Resumes when rendered HTML is delivered.
   6. **Suspends** again and calls email-test-api with the rendered HTML. Resumes when screenshots are delivered.
   7. Uploads screenshots to Google Drive (`YYYY-MM-DD/{campaign}/`)
-  8. Filter: continues only if campaign has `Proof/Slack` tag and it's a weekday
-  9. (Disabled) Newsletter approval: looks up `NEWSLETTER_RUNS`, posts Slack Block Kit message with Approve/Reject buttons, **suspends** until button click or T-10m timeout, then applies the decision.
+  8. **AI proof verification:** checks all links (HEAD requests), extracts plaintext, sends screenshots + content to OpenAI GPT-4o for rendering/content/link analysis. Returns `needs_review` + categorized issues with severity.
+  9. Filter: exits silently if proof passed automated QC (`needs_review=false`). Continues to Slack only if issues were flagged.
+  10. (Disabled) Newsletter approval: posts Slack Block Kit message with AI verification issues, Approve/Reject buttons, **suspends** until button click or T-10m timeout, then applies the decision. Data comes from content-prep callback (no separate Snowflake lookup).
 
 ### Newsletter content pipeline
 
-Locks stories into a Braze catalog, generates AI subject/intro, writes history to Snowflake.
+Locks stories into a Braze catalog, generates AI subject/intro via Elvex Ghostwriter, writes history to Snowflake.
 
-- **`newsletter-content-prep-p_zAC1lWL/`** — per-newsletter prep. Reads per-newsletter config from Snowflake (supports multi-feed via `FEED_SOURCES` VARIANT column), fetches story feeds, inserts a `NEWSLETTER_RUNS` row (UUID via `UUID_STRING()`), upserts `slot_1..slot_N` rows into the Braze catalog, calls OpenAI to generate `ai_subject` + `ai_intro`, upserts the `meta` row with the AI content, and writes it all to Snowflake history. Then exits — no waiting. The approval wait happens later in the orchestrator.
+- **`newsletter-content-prep-p_zAC1lWL/`** — per-newsletter prep. Reads per-newsletter config from Snowflake (supports multi-feed via `FEED_SOURCES` VARIANT column), fetches story feeds, inserts a `NEWSLETTER_RUNS` row (UUID via `UUID_STRING()`), upserts `slot_1..slot_N` rows into the Braze catalog, calls Elvex (governed AI persona "Ghostwriter") to generate `ai_subject` + `ai_intro`, upserts the meta row with the AI content, and writes it all to Snowflake history. Then exits — no waiting. The approval wait happens later in the orchestrator.
 - **SQL DDL:** `newsletter-content-prep-p_zAC1lWL/sql/schema.sql` — `NEWSLETTER_CONFIG` and `NEWSLETTER_RUNS` table definitions. Tables live in `MCC_RAW.MARKETING_DEV`.
 
 ### Inactive
@@ -45,44 +47,52 @@ Locks stories into a Braze catalog, generates AI subject/intro, writes history t
 
 ```mermaid
 flowchart TD
-  cron[qc-proof-scheduler cron] --> filter{Filter by Proof tag}
-  filter --> orch[proof-ochestrator]
-  orch --> configcheck[Check NEWSLETTER_CONFIG]
-  configcheck --> delay[Delay until T-1h]
+  subgraph SCHEDULE ["1. Scheduling"]
+    cron["Cron job fetches today's<br/>Braze scheduled messages"]
+    cron --> prooftag{"Has 'Proof' tag?"}
+    prooftag -->|no| skip((skip))
+    prooftag -->|yes| trigger["POST campaign to orchestrator"]
+  end
 
-  delay --> nlcheck{Newsletter match?}
-  nlcheck -->|yes| suspend0[suspend_for_content_prep]
-  nlcheck -->|no| rebuild[Rebuild Braze message]
-  suspend0 -->|$.flow.suspend| prep[newsletter-content-prep]
-  prep --> fetchfeed[Fetch feeds + lock stories]
-  fetchfeed --> openai[OpenAI subject + intro]
-  openai --> callback[POST callback to resume_url]
-  callback -->|resume| rebuild
+  subgraph PREP ["2. Content Prep (newsletters only)"]
+    trigger --> config["Look up newsletter in<br/>Snowflake NEWSLETTER_CONFIG"]
+    config --> isNL{Newsletter?}
+    isNL -->|no| render
+    isNL -->|yes| suspend_prep["Pause orchestrator,<br/>call newsletter-content-prep"]
 
-  rebuild --> suspend1[suspend_for_render]
-  suspend1 -->|$.flow.suspend| brazerender[braze-render service]
-  brazerender -->|callback: rendered_html| resume1((resume))
+    suspend_prep --> feed["Fetch story feeds<br/>and lock into Braze catalog"]
+    feed --> ghostwriter["Elvex Ghostwriter generates<br/>AI subject + intro"]
+    ghostwriter --> snowflake_write["Write stories + AI content<br/>to Snowflake history"]
+    snowflake_write --> resume_prep["Resume orchestrator"]
+  end
 
-  resume1 --> suspend2[suspend_for_screenshots]
-  suspend2 -->|$.flow.suspend| eoa[email-test-api service]
-  eoa -->|callback: screenshots| resume2((resume))
+  subgraph RENDER ["3. Render + Screenshot"]
+    resume_prep --> render["Extract Liquid template<br/>from Braze message"]
+    render --> suspend_render["Pause, send Liquid<br/>to braze-render service"]
+    suspend_render --> resume_render["Resume with<br/>rendered HTML"]
+    resume_render --> suspend_eoa["Pause, send HTML<br/>to email-test-api"]
+    suspend_eoa --> resume_eoa["Resume with<br/>screenshot URLs"]
+    resume_eoa --> drive["Upload screenshots<br/>to Google Drive"]
+  end
 
-  resume2 --> drive[Upload to Drive]
-  drive --> tagfilter{Proof/Slack tag + weekday?}
-  tagfilter -->|no| done((done))
-  tagfilter -->|yes| lookup[Lookup NEWSLETTER_RUNS]
-  lookup --> suspend3[post_and_suspend]
-  suspend3 -->|$.flow.suspend timeoutMs| paused((Suspended))
-  paused -->|Approve click| resumeA[apply_decision: APPROVED]
-  paused -->|Reject click| resumeR[apply_decision: REJECTED]
-  paused -->|Timeout at T-10m| resumeT[apply_decision: TIMEOUT]
+  subgraph QC ["4. AI Quality Check"]
+    drive --> verify["Check all links (HEAD requests)<br/>+ OpenAI vision analysis<br/>of screenshots"]
+    verify --> verdict{Issues found?}
+    verdict -->|"no — proof looks good"| done((Done))
+  end
 
-  resumeR --> clear[Braze PATCH meta clear AI]
-  resumeT --> clear
-  clear --> updRun[UPDATE NEWSLETTER_RUNS]
-  resumeA --> updRun
+  subgraph APPROVAL ["5. Human Approval (disabled)"]
+    verdict -->|"yes — needs review"| slack["Post to Slack with<br/>issues + Approve/Reject buttons"]
+    slack --> waiting((Waiting for<br/>human response))
+    waiting -->|Approve| approved["Mark APPROVED"]
+    waiting -->|Reject| rejected["Clear AI content<br/>from Braze catalog"]
+    waiting -->|"No response by T-10m"| timeout["Clear AI content<br/>from Braze catalog"]
+    approved --> update_run["Update NEWSLETTER_RUNS<br/>in Snowflake"]
+    rejected --> update_run
+    timeout --> update_run
+  end
 
-  updRun --> brazeSend[Braze sends at T-0 from catalog]
+  update_run --> send["Braze sends campaign at<br/>scheduled time using<br/>whatever is in the catalog"]
 ```
 
 Timing summary:
@@ -95,7 +105,8 @@ Timing summary:
 | ~T-50m | **Suspend 2:** braze-render renders Liquid via Braze |
 | ~T-40m | **Suspend 3:** email-test-api creates EOA test, polls for screenshots |
 | ~T-30m | Screenshots uploaded to Drive |
-| ~T-30m | **Suspend 4:** Slack approval message posted (if newsletter + weekday) |
+| ~T-30m | AI proof verification (link checks + vision analysis) |
+| ~T-25m | **Suspend 4:** Slack approval message posted (if issues flagged) |
 | T-10m | Suspension times out if no click -> auto-reject |
 | T-0 | Braze sends the actual campaign using whatever is in the catalog |
 
@@ -110,7 +121,8 @@ Timing summary:
 | Email on Acid | Screenshot QA (via email-test-api) | `apn_b6hZOVx` |
 | Google Drive | Proof screenshot archive | `apn_mnh5B9x` |
 | Slack | Approval UX + proof notifications | configured per workflow |
-| OpenAI | AI subject/intro generation | `apn_QPhO4kd` |
+| Elvex | Governed AI content generation (Ghostwriter persona) | API key in workflow props |
+| OpenAI | Proof verification (vision analysis) | `apn_QPhO4kd` |
 | Snowflake | `MCC_RAW.MARKETING_DEV` config + history | `apn_yghdQYJ` |
 
 ---
@@ -169,6 +181,7 @@ curl -s -H "Authorization: Bearer $PIPEDREAM_API_KEY" \
 | `braze-render` + `braze-email-capture` | Production, end-to-end verified |
 | `qc-proof-scheduler` | Production (currently inactive), points at orchestrator |
 | `proof-ochestrator` (proof steps) | Scaffolded, needs `braze_render_url` and `email_test_api_url` props set in Pipedream UI |
+| `proof-ochestrator` (`verify_proof`) | Integrated — AI proof verification via link checks + OpenAI vision |
 | `proof-ochestrator` (newsletter approval steps) | Scaffolded, disabled — needs Slack/Braze auth + catalog |
 | `newsletter-content-prep` | Scaffolded, Snowflake tables created, Trailhead pilot seeded (ENABLED=FALSE) |
 
@@ -179,7 +192,7 @@ Before enabling the newsletter flow end-to-end:
 4. Set `braze_render_url` and `email_test_api_url` props on orchestrator suspend steps in Pipedream UI
 5. Set `content_prep_url` prop on `trigger_content_prep` step
 6. Set the Slack approval channel on `post_and_suspend` and flip `dry_run` to false
-7. Enable `lookup_newsletter_run`, `post_and_suspend`, `apply_decision` steps in orchestrator
+7. Enable `post_and_suspend` and `apply_decision` steps in orchestrator
 8. `UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG SET ENABLED = TRUE WHERE NEWSLETTER_KEY = 'crm_trailhead_nonsubnl'`
 
 ---

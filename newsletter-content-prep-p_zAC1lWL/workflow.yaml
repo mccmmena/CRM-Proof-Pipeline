@@ -120,10 +120,10 @@ steps:
         AI_RAW_RESPONSE = PARSE_JSON(:4)
         WHERE RUN_ID = :5
       params:
-      - "{{steps.generate_ai_content.$return_value.ai_subject}}"
-      - "{{steps.generate_ai_content.$return_value.ai_intro}}"
-      - "{{steps.generate_ai_content.$return_value.ai_model}}"
-      - "{{JSON.stringify(steps.generate_ai_content.$return_value.raw)}}"
+      - "{{steps.parse_ghostwriter.$return_value.ai_subject}}"
+      - "{{steps.parse_ghostwriter.$return_value.ai_intro}}"
+      - "elvex"
+      - "{{JSON.stringify(steps.ghostwriter.$return_value)}}"
       - "{{steps.write_run_history.$return_value.run_id}}"
 - namespace: write_ai_to_history
   runtime: nodejs20.x
