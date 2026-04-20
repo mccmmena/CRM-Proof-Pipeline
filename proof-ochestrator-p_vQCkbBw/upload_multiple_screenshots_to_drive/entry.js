@@ -150,6 +150,21 @@ export default defineComponent({
           fields: "id,name,webViewLink,size"
         })
 
+        // Make the file publicly accessible so Slack can render it inline
+        try {
+          await axios($, {
+            method: "POST",
+            url: `https://www.googleapis.com/drive/v3/files/${uploadedFile.id}/permissions?supportsAllDrives=true`,
+            headers: {
+              Authorization: `Bearer ${this.google_drive.$auth.oauth_access_token}`,
+              "Content-Type": "application/json",
+            },
+            data: { type: "anyone", role: "reader" },
+          });
+        } catch (permErr) {
+          console.warn(`Could not set public permission for ${uploadedFile.name}:`, permErr.message);
+        }
+
         uploadedFiles.push({
           id: uploadedFile.id,
           name: uploadedFile.name,

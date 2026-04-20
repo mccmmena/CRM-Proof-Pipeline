@@ -1,111 +1,13 @@
-// Build a Block Kit proof message with AI preview, screenshot links,
-// and approve/reject URL buttons, then post to Slack and suspend the
-// workflow until a button click or timeout.
+// Post a minimal proof message to the channel, then add detail as thread
+// replies (AI content + buttons, QC verification, screenshots).  Suspend
+// the workflow until a button click or timeout.
 //
-// AI content comes from the fetch_ai_content step (no longer fetched here).
-// The timeout is set to (next_send_time - 10 min - now), so suspension
-// auto-resolves at the approval cutoff.
+// Parent message is kept slim so #crm-team stays scannable.  The approve/
+// reject buttons live on the first reply alongside the AI content.
 
 import { axios } from "@pipedream/platform";
 
 const CUTOFF_MINUTES_BEFORE_SEND = 10;
-
-function buildBlocks({ run, aiSubject, aiIntro, sendTime, driveFiles, approveUrl, rejectUrl, verifyResult }) {
-  const blocks = [
-    {
-      type: "header",
-      text: { type: "plain_text", text: `${run.newsletter_key} — Proof Ready` },
-    },
-    {
-      type: "section",
-      fields: [
-        { type: "mrkdwn", text: `*Sends:*\n${sendTime}` },
-        { type: "mrkdwn", text: `*Run ID:*\n\`${run.run_id}\`` },
-      ],
-    },
-  ];
-
-  if (aiSubject) {
-    blocks.push({
-      type: "section",
-      text: { type: "mrkdwn", text: `*AI Subject:*\n> ${aiSubject}` },
-    });
-  }
-  if (aiIntro) {
-    blocks.push({
-      type: "section",
-      text: { type: "mrkdwn", text: `*AI Intro:*\n> ${aiIntro}` },
-    });
-  }
-
-  blocks.push({ type: "divider" });
-
-  // Verification results (from verify_proof step)
-  if (verifyResult?.issues?.length > 0) {
-    const severityIcon = { high: ":red_circle:", medium: ":warning:", low: ":white_circle:" };
-    const issueLines = verifyResult.issues
-      .map((i) => `${severityIcon[i.severity] || ":warning:"} [${i.type}] ${i.description}`)
-      .join("\n");
-    blocks.push({
-      type: "section",
-      text: { type: "mrkdwn", text: `*Issues Found:*\n${issueLines}` },
-    });
-  } else {
-    blocks.push({
-      type: "section",
-      text: { type: "mrkdwn", text: `:large_green_circle: *Proof passed automated QC* — no rendering issues detected` },
-    });
-  }
-
-  if (verifyResult?.summary) {
-    blocks.push({
-      type: "context",
-      elements: [{ type: "mrkdwn", text: `_AI Assessment: ${verifyResult.summary}_` }],
-    });
-  }
-
-  blocks.push({ type: "divider" });
-
-  // Screenshots from Google Drive
-  if (driveFiles && driveFiles.length > 0) {
-    const links = driveFiles
-      .slice(0, 10)
-      .map((f) => `<https://drive.google.com/uc?export=view&id=${f.id}|${f.client || f.name}>`)
-      .join(" · ");
-    blocks.push({
-      type: "section",
-      text: { type: "mrkdwn", text: `*Screenshots:* ${links}` },
-    });
-  }
-
-  blocks.push({
-    type: "actions",
-    block_id: "approval_actions",
-    elements: [
-      {
-        type: "button",
-        style: "primary",
-        text: { type: "plain_text", text: "Approve" },
-        url: approveUrl,
-      },
-      {
-        type: "button",
-        style: "danger",
-        text: { type: "plain_text", text: "Reject (use defaults)" },
-        url: rejectUrl,
-      },
-    ],
-  });
-
-  blocks.push({
-    type: "context",
-    elements: [
-      { type: "mrkdwn", text: `Auto-rejects at T-${CUTOFF_MINUTES_BEFORE_SEND} min if no decision.` },
-    ],
-  });
-
-  return blocks;
-}
 
 export default defineComponent({
   props: {
@@ -148,6 +50,29 @@ export default defineComponent({
       optional: true,
     },
   },
+  methods: {
+    async postSlack($, { channel, thread_ts, text, blocks, unfurl_media }) {
+      const data = { channel, text };
+      if (thread_ts) data.thread_ts = thread_ts;
+      if (blocks) data.blocks = blocks;
+      if (unfurl_media !== undefined) data.unfurl_media = unfurl_media;
+
+      const resp = await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data,
+      });
+
+      if (!resp.ok) {
+        throw new Error(`Slack post failed: ${resp.error}`);
+      }
+      return resp;
+    },
+  },
   async run({ $ }) {
     const config = this.config;
     const driveFiles = this.driveFiles || [];
@@ -181,52 +106,146 @@ export default defineComponent({
       throw new Error("No Slack channel — set SLACK_CHANNEL_ID in NEWSLETTER_CONFIG or the approval_channel prop");
     }
 
-    // Suspend the workflow. Pipedream returns resume_url + cancel_url.
-    // We use resume_url with query params for both buttons so we can tell
-    // approve vs reject apart when the workflow wakes up.
+    // Get the resume URL before posting (workflow suspends at step end)
     const { resume_url } = $.flow.suspend(timeoutMs);
     const approveUrl = `${resume_url}?decision=approve`;
     const rejectUrl = `${resume_url}?decision=reject`;
 
-    const blocks = buildBlocks({
-      run,
-      aiSubject,
-      aiIntro,
-      sendTime,
-      driveFiles,
-      approveUrl,
-      rejectUrl,
-      verifyResult,
+    // ── Parent message (channel) ────────────────────────────────────────
+    const parentBlocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: `${run.newsletter_key} — Proof Ready` },
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Sends:*\n${sendTime}` },
+          { type: "mrkdwn", text: `*Run ID:*\n\`${run.run_id}\`` },
+        ],
+      },
+      {
+        type: "context",
+        elements: [
+          { type: "mrkdwn", text: `Auto-rejects at T-${CUTOFF_MINUTES_BEFORE_SEND} min if no decision. Open thread to review & approve.` },
+        ],
+      },
+    ];
+
+    const parent = await this.postSlack($, {
+      channel,
+      text: `Proof ready for ${run.newsletter_key}`,
+      blocks: parentBlocks,
     });
 
-    const response = await axios($, {
-      method: "POST",
-      url: "https://slack.com/api/chat.postMessage",
-      headers: {
-        Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      data: {
+    const threadTs = parent.ts;
+
+    // ── Reply 1: AI content + approve/reject buttons ────────────────────
+    const reply1Blocks = [];
+
+    if (aiSubject) {
+      reply1Blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `*AI Subject:*\n> ${aiSubject}` },
+      });
+    }
+    if (aiIntro) {
+      reply1Blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `*AI Intro:*\n> ${aiIntro}` },
+      });
+    }
+
+    if (reply1Blocks.length === 0) {
+      reply1Blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: "_No AI content for this newsletter._" },
+      });
+    }
+
+    reply1Blocks.push({ type: "divider" });
+    reply1Blocks.push({
+      type: "actions",
+      block_id: "approval_actions",
+      elements: [
+        {
+          type: "button",
+          style: "primary",
+          text: { type: "plain_text", text: "Approve" },
+          url: approveUrl,
+        },
+        {
+          type: "button",
+          style: "danger",
+          text: { type: "plain_text", text: "Reject (use defaults)" },
+          url: rejectUrl,
+        },
+      ],
+    });
+    reply1Blocks.push({
+      type: "context",
+      elements: [
+        { type: "mrkdwn", text: `Auto-rejects at T-${CUTOFF_MINUTES_BEFORE_SEND} min if no decision.` },
+      ],
+    });
+
+    await this.postSlack($, {
+      channel,
+      thread_ts: threadTs,
+      text: aiSubject ? `AI Subject: ${aiSubject}` : "Review & approve",
+      blocks: reply1Blocks,
+    });
+
+    // ── Reply 2: QC verification ────────────────────────────────────────
+    const verifyLines = [];
+
+    if (verifyResult?.issues?.length > 0) {
+      const severityIcon = { high: ":red_circle:", medium: ":warning:", low: ":white_circle:" };
+      const issueLines = verifyResult.issues
+        .map((i) => `${severityIcon[i.severity] || ":warning:"} [${i.type}] ${i.description}`)
+        .join("\n");
+      verifyLines.push(`*Issues Found:*\n${issueLines}`);
+    } else {
+      verifyLines.push(`:large_green_circle: *Proof passed automated QC* — no rendering issues detected`);
+    }
+
+    if (verifyResult?.summary) {
+      verifyLines.push(`_AI Assessment: ${verifyResult.summary}_`);
+    }
+
+    await this.postSlack($, {
+      channel,
+      thread_ts: threadTs,
+      text: verifyLines.join("\n\n"),
+    });
+
+    // ── Reply 3: Screenshots (2 images) ─────────────────────────────────
+    if (driveFiles.length > 0) {
+      const imageBlocks = driveFiles.slice(0, 2).map((f) => ({
+        type: "image",
+        image_url: `https://drive.google.com/uc?export=view&id=${f.id}`,
+        alt_text: f.client || f.name,
+      }));
+
+      await this.postSlack($, {
         channel,
-        text: `Proof ready for ${run.newsletter_key}`,
-        blocks,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Slack post failed: ${response.error}`);
+        thread_ts: threadTs,
+        text: "Screenshots",
+        blocks: imageBlocks,
+        unfurl_media: true,
+      });
     }
 
     $.export(
       "$summary",
-      `Posted and suspended — will auto-resume in ${Math.round(timeoutMs / 60000)} min if no click`
+      `Posted proof thread (${driveFiles.length > 0 ? "with screenshots" : "no screenshots"}) — auto-resumes in ${Math.round(timeoutMs / 60000)} min`
     );
 
     return {
       posted: true,
       run_id: run.run_id,
-      channel: response.channel,
-      ts: response.ts,
+      channel: parent.channel,
+      ts: threadTs,
       timeoutMs,
     };
   },
