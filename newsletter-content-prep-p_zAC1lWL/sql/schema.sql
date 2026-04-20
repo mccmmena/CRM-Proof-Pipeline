@@ -6,8 +6,8 @@
 -- ----------------------------------------------------------------------------
 -- NEWSLETTER_CONFIG
 -- One row per newsletter. NEWSLETTER_KEY must exactly match the Braze
--- campaign name or canvas name so qc-proof-scheduler/route_and_trigger can
--- route to content-prep.
+-- canvas name (resolved via canvas details API). CANVAS_ID stores the
+-- Braze canvas identifier used by the orchestrator trigger.
 -- ----------------------------------------------------------------------------
 -- FEED_SOURCES is an ordered array of feed specs. Each element:
 --   { "url": "https://...", "count": 3, "label": "optional section name" }
@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG (
   ENABLED               BOOLEAN       NOT NULL DEFAULT TRUE,
   AI_PROMPT_TEMPLATE    STRING,
   AI_MODEL              STRING        DEFAULT 'gpt-5.4-mini',
+  CANVAS_ID             STRING,       -- Braze canvas ID for this newsletter
   PROOF_WORKFLOW_URL    STRING,       -- HTTP trigger URL for the proof orchestrator workflow
   CREATED_AT            TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
   UPDATED_AT            TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
@@ -67,7 +68,7 @@ CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS (
 -- INSERT INTO MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG (
 --   NEWSLETTER_KEY, DISPLAY_NAME, FEED_SOURCES, BRAZE_CATALOG_ID,
 --   MAX_STORIES, SLACK_CHANNEL_ID, APPROVERS, AI_PROMPT_TEMPLATE, AI_MODEL,
---   PROOF_WORKFLOW_URL, ENABLED
+--   CANVAS_ID, PROOF_WORKFLOW_URL, ENABLED
 -- ) SELECT
 --   'crm_the_trailhead_master',
 --   'The Trailhead',
@@ -78,6 +79,7 @@ CREATE TABLE IF NOT EXISTS MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS (
 --   ARRAY_CONSTRUCT('U0ABCDEFG'),
 --   NULL,
 --   'gpt-5.4-mini',
+--   'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',  -- Braze canvas ID
 --   'https://eone5ahulwjwhb6.m.pipedream.net',
 --   FALSE;
 --

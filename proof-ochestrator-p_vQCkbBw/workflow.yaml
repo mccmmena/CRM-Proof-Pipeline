@@ -8,6 +8,14 @@ settings:
 triggers:
 - id: hi_MWHpn8Z
 steps:
+- namespace: resolve_braze_details
+  runtime: nodejs20.x
+  uses: "./resolve_braze_details/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_1Khpe1W
+    canvasId: "{{steps.trigger.event.body.canvas_id}}"
+    campaignId: "{{steps.trigger.event.body.campaign_id}}"
 - namespace: check_config_query
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
@@ -26,20 +34,18 @@ steps:
         WHERE NEWSLETTER_KEY = :1 AND ENABLED = TRUE
         LIMIT 1
       params:
-      - "{{steps.trigger.event.body.name || steps.trigger.event.body.campaign_name
-        || steps.trigger.event.body.canvas_name}}"
+      - "{{steps.resolve_braze_details.$return_value.name}}"
 - namespace: check_config
   runtime: nodejs20.x
   uses: "./check_config/entry.js"
   props:
     configRows: "{{steps.check_config_query.$return_value}}"
-    campaignName: "{{steps.trigger.event.body.name || steps.trigger.event.body.campaign_name
-      || steps.trigger.event.body.canvas_name}}"
+    campaignName: "{{steps.resolve_braze_details.$return_value.name}}"
 - namespace: optional_delay
   runtime: nodejs20.x
   uses: "./optional_delay/entry.js"
   props:
-    delayMinutes: "{{steps.trigger.event.body.delay_minutes || 0}}"
+    nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
 - namespace: suspend_for_content_prep
   runtime: nodejs20.x
   uses: "./suspend_for_content_prep/entry.js"
@@ -47,22 +53,13 @@ steps:
     content_prep_url: https://eo6ad4e0u4fgvuo.m.pipedream.net
     newsletterKey: "{{steps.check_config.$return_value.newsletter_key}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
-- namespace: utils_rebuild_braze_message
-  runtime: nodejs20.x
-  uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
-  props:
-    braze:
-      authProvisionId: apn_1Khpe1W
-    app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
-    scheduledItem: "{{steps.trigger.event.body}}"
-    subject: "{{steps.trigger.event.body.name}}_{{steps.trigger.context.id}}"
 - namespace: suspend_for_render
   runtime: nodejs20.x
   uses: "./suspend_for_render/entry.js"
   props:
     braze_render_url: https://eov0l2spkm1h5vp.m.pipedream.net
-    emailBody: "{{steps.utils_rebuild_braze_message.$return_value?.email?.body}}"
-    emailSubject: "{{steps.utils_rebuild_braze_message.$return_value?.email?.subject}}"
+    emailBody: "{{steps.resolve_braze_details.$return_value.email.body}}"
+    emailSubject: "{{steps.resolve_braze_details.$return_value.email.subject}}"
 - namespace: suspend_for_screenshots
   runtime: nodejs20.x
   uses: "./suspend_for_screenshots/entry.js"
@@ -83,7 +80,7 @@ steps:
       authProvisionId: apn_mnh5B9x
     screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
-    messageName: "{{steps.trigger.event.body.name}}"
+    messageName: "{{steps.resolve_braze_details.$return_value.name}}"
 - namespace: verify_proof
   runtime: nodejs20.x
   uses: "./verify_proof/entry.js"
@@ -92,7 +89,7 @@ steps:
       authProvisionId: apn_QPhO4kd
     renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
     screenshots: "{{steps.extract_screenshots.$return_value?.screenshots}}"
-    subject: "{{steps.extract_screenshots.$return_value?.realSubject || steps.trigger.event.body.name}}"
+    subject: "{{steps.extract_screenshots.$return_value?.realSubject || steps.resolve_braze_details.$return_value.name}}"
 - namespace: filter
   runtime: nodejs20.x
   uses: "./filter/entry.js"

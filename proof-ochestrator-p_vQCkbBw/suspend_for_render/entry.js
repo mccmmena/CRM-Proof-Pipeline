@@ -24,7 +24,7 @@ export default defineComponent({
   },
   async run({ $ }) {
     if (!this.emailBody) {
-      throw new Error("No email body from utils_rebuild_braze_message");
+      throw new Error("No email body from resolve_braze_details");
     }
 
     const { resume_url } = $.flow.suspend(10 * 60 * 1000); // 10 min
