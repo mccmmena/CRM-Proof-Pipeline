@@ -3,13 +3,10 @@ import { axios } from "@pipedream/platform";
 const DEFAULT_CLIENTS = [
   "iphone16_18",
   "iphone16_18_dm",
-  "iphone16pro_18",
   "android15_gmailapp_pixel9_lm",
   "android15_gmailapp_pixel9_dm",
   "gmailcom-lm_chrcurrent_win10",
   "gmailcom-dm_chrcurrent_win10",
-  "outlookcom-lm_chrcurrent_win10",
-  "outlookcom-dm_chrcurrent_win10",
   "applemail16",
   "applemail16_dm",
   "m365_w11_lm_dt",

@@ -5,13 +5,10 @@
 const PREFERRED_CLIENTS = [
   { id: "iphone16_18", name: "iPhone 16 - iOS 18" },
   { id: "iphone16_18_dm", name: "iPhone 16 - iOS 18 Dark" },
-  { id: "iphone16pro_18", name: "iPhone 16 Pro - iOS 18" },
   { id: "android15_gmailapp_pixel9_lm", name: "Gmail App - Pixel 9" },
   { id: "android15_gmailapp_pixel9_dm", name: "Gmail App - Pixel 9 Dark" },
   { id: "gmailcom-lm_chrcurrent_win10", name: "Gmail.com - Chrome" },
   { id: "gmailcom-dm_chrcurrent_win10", name: "Gmail.com - Chrome Dark" },
-  { id: "outlookcom-lm_chrcurrent_win10", name: "Outlook.com - Chrome" },
-  { id: "outlookcom-dm_chrcurrent_win10", name: "Outlook.com - Chrome Dark" },
   { id: "applemail16", name: "Apple Mail 16" },
   { id: "applemail16_dm", name: "Apple Mail 16 Dark" },
   { id: "m365_w11_lm_dt", name: "Outlook 365 - Win 11" },

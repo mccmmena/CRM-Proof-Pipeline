@@ -232,26 +232,52 @@ export default defineComponent({
       text: verifyLines.join("\n\n"),
     });
 
-    // ── Reply 3: Screenshots (full-width images) ──────────────────────
+    // ── Reply 3: Screenshots (light + dark mode carousels) ─────────────
     if (driveFiles.length > 0) {
-      const imageBlocks = [];
-      for (const f of driveFiles) {
-        imageBlocks.push({
-          type: "image",
-          image_url: `https://drive.google.com/uc?export=view&id=${f.id}`,
-          alt_text: f.client || f.name,
-          title: { type: "plain_text", text: f.client || f.name },
+      const lightFiles = driveFiles.filter((f) => {
+        const id = (f.client || f.name || "").toLowerCase();
+        return !id.includes("dark") && !id.includes("_dm");
+      });
+      const darkFiles = driveFiles.filter((f) => {
+        const id = (f.client || f.name || "").toLowerCase();
+        return id.includes("dark") || id.includes("_dm");
+      });
+
+      const toCarousel = (files) => ({
+        type: "carousel",
+        elements: files.map((f) => ({
+          type: "card",
+          hero_image: {
+            type: "image",
+            image_url: `https://drive.google.com/uc?export=view&id=${f.id}`,
+            alt_text: f.client || f.name,
+          },
+          title: { type: "mrkdwn", text: f.client || f.name },
+        })),
+      });
+
+      const blocks = [];
+      if (lightFiles.length > 0) {
+        blocks.push({
+          type: "section",
+          text: { type: "mrkdwn", text: ":sunny: *Light Mode*" },
         });
+        blocks.push(toCarousel(lightFiles));
+      }
+      if (darkFiles.length > 0) {
+        blocks.push({
+          type: "section",
+          text: { type: "mrkdwn", text: ":crescent_moon: *Dark Mode*" },
+        });
+        blocks.push(toCarousel(darkFiles));
       }
 
-      // Slack blocks limit is 50 — post in batches if needed
-      const BATCH = 20;
-      for (let i = 0; i < imageBlocks.length; i += BATCH) {
+      if (blocks.length > 0) {
         await this.postSlack($, {
           channel,
           thread_ts: threadTs,
           text: "Screenshots",
-          blocks: imageBlocks.slice(i, i + BATCH),
+          blocks,
           unfurl_media: false,
         });
       }
