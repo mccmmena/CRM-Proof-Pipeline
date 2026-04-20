@@ -17,18 +17,11 @@ export default defineComponent({
       label: "Rendered HTML",
       description: "From braze-render resume data",
     },
-    subject: {
-      type: "string",
-      label: "Subject",
-      optional: true,
-    },
   },
   async run({ $ }) {
     if (!this.renderedHtml) {
       throw new Error("No rendered_html — braze-render callback may have failed");
     }
-
-    const subject = this.subject || `proof_${Date.now()}`;
 
     const { resume_url } = $.flow.suspend(20 * 60 * 1000); // 20 min
 
@@ -38,12 +31,11 @@ export default defineComponent({
       headers: { "Content-Type": "application/json" },
       data: {
         html_body: this.renderedHtml,
-        subject,
         callback_url: resume_url,
       },
     });
 
     $.export("$summary", `Suspended — waiting for email-test-api callback`);
-    return { subject, rendered_html: this.renderedHtml, waiting_for: "email_test_api" };
+    return { rendered_html: this.renderedHtml, waiting_for: "email_test_api" };
   },
 });

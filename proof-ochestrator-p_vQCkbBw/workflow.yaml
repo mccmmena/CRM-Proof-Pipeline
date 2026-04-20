@@ -68,7 +68,6 @@ steps:
   props:
     email_test_api_url: https://eoihl6hmsymk4tc.m.pipedream.net
     renderedHtml: "{{steps.suspend_for_render.$resume_data?.body?.rendered_html}}"
-    subject: "{{steps.suspend_for_render.$resume_data?.body?.subject || steps.suspend_for_render.$return_value?.subject}}"
 - namespace: extract_screenshots
   runtime: nodejs20.x
   uses: "./extract_screenshots/entry.js"
