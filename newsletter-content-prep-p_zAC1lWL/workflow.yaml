@@ -73,7 +73,7 @@ steps:
   uses: "./json_to_csv/entry.js"
 - namespace: braze_catalog_update
   runtime: nodejs20.x
-  uses: "@mcclatchy/braze-catalog-update@0.0.3"
+  uses: "./braze_catalog_update/entry.js"
   props:
     braze:
       authProvisionId: apn_6LhOGA9
