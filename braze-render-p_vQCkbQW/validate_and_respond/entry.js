@@ -40,6 +40,12 @@ export default defineComponent({
       .slice(0, 8);
     const subject = body.subject || `braze-render_${Date.now()}_${hash}`;
 
+    // Unique key for correlating the sent email with the callback.
+    // Embedded as an HTML comment so it survives Braze rendering unchanged,
+    // unlike the subject which may contain Liquid that Braze resolves.
+    const renderKey = `render_${Date.now()}_${hash}`;
+    const taggedBody = `<!-- pipedream-render-key:${renderKey} -->${body.liquid}`;
+
     const from_email = body.from_email || DEFAULTS.from_email;
     const from_name = body.from_name || DEFAULTS.from_name;
     const external_user_ids =
@@ -52,7 +58,7 @@ export default defineComponent({
           app_id: DEFAULTS.braze_app_id,
           subject,
           from: `${from_name} <${from_email}>`,
-          body: body.liquid,
+          body: taggedBody,
         },
       },
     };
@@ -61,13 +67,14 @@ export default defineComponent({
       immediate: true,
       status: 202,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "accepted", subject }),
+      body: JSON.stringify({ status: "accepted", renderKey }),
     });
 
-    $.export("$summary", `Accepted render request with subject: ${subject}`);
+    $.export("$summary", `Accepted render request (key: ${renderKey})`);
 
     return {
       subject,
+      renderKey,
       braze_payload,
       callback_url: body.callback_url,
     };

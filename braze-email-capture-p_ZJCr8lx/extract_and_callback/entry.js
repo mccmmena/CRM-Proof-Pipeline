@@ -61,12 +61,21 @@ export default defineComponent({
       return $.flow.exit("No subject");
     }
 
-    const entry = await this.data.get(subject);
+    // Extract the render key from the HTML comment injected by braze-render
+    const keyMatch = rendered_html.match(/<!-- pipedream-render-key:(.+?) -->/);
+    const renderKey = keyMatch?.[1];
+
+    if (!renderKey) {
+      $.export("$summary", `No render key found in email body`);
+      return $.flow.exit("No render key in body");
+    }
+
+    const entry = await this.data.get(renderKey);
 
     if (!entry || !entry.callback_url) {
       $.export(
         "$summary",
-        `No callback registered for subject: ${subject}`
+        `No callback registered for key: ${renderKey}`
       );
       return $.flow.exit("No callback found");
     }
@@ -85,10 +94,10 @@ export default defineComponent({
     });
 
     // Clean up the data store entry
-    await this.data.delete(subject);
+    await this.data.delete(renderKey);
 
-    $.export("$summary", `Posted rendered HTML for "${subject}" to callback`);
+    $.export("$summary", `Posted rendered HTML for "${subject}" (key: ${renderKey}) to callback`);
 
-    return { callback_status: "delivered", subject };
+    return { callback_status: "delivered", subject, renderKey };
   },
 });

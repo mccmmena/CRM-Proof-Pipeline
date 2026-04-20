@@ -5,16 +5,16 @@ export default defineComponent({
     },
   },
   async run({ steps, $ }) {
-    const { subject, callback_url } =
+    const { renderKey, callback_url } =
       steps.validate_and_respond.$return_value;
 
-    await this.data.set(subject, {
+    await this.data.set(renderKey, {
       callback_url,
       timestamp: Date.now(),
     });
 
-    $.export("$summary", `Stored callback for subject: ${subject}`);
+    $.export("$summary", `Stored callback for key: ${renderKey}`);
 
-    return { subject, stored: true };
+    return { renderKey, stored: true };
   },
 });
