@@ -147,15 +147,18 @@ export default defineComponent({
       type: "string",
       label: "Next Send Time",
     },
+    contentPrepResume: {
+      type: "any",
+      label: "Content Prep Resume Data",
+      optional: true,
+    },
   },
   async run({ $ }) {
     const config = this.config;
     const driveFiles = this.driveFiles || [];
     const verifyResult = this.verifyResult;
 
-    // Build a run object from check_config + content-prep resume data
-    // Content-prep resume body: { status, run_id, newsletter_key, ai_subject, ai_intro }
-    const contentPrepResume = $.context?.resume_history?.[0]?.body || {};
+    const contentPrepResume = this.contentPrepResume || {};
     const run = {
       run_id: contentPrepResume.run_id || "unknown",
       newsletter_key: config.newsletter_key,

@@ -67,9 +67,13 @@ steps:
   uses: "./suspend_for_screenshots/entry.js"
   props:
     email_test_api_url: https://eoihl6hmsymk4tc.m.pipedream.net
+    renderedHtml: "{{steps.suspend_for_render.$resume_data?.body?.rendered_html}}"
+    subject: "{{steps.suspend_for_render.$resume_data?.body?.subject || steps.suspend_for_render.$return_value?.subject}}"
 - namespace: extract_screenshots
   runtime: nodejs20.x
   uses: "./extract_screenshots/entry.js"
+  props:
+    resumeData: "{{steps.suspend_for_screenshots.$resume_data?.body}}"
 - namespace: upload_multiple_screenshots_to_drive
   runtime: nodejs20.x
   uses: "./upload_multiple_screenshots_to_drive/entry.js"
@@ -101,6 +105,7 @@ steps:
     driveFiles: "{{steps.upload_multiple_screenshots_to_drive.$return_value?.uploadedFiles}}"
     verifyResult: "{{steps.verify_proof.$return_value}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
+    contentPrepResume: "{{steps.suspend_for_content_prep.$resume_data?.body}}"
 - namespace: apply_decision
   runtime: nodejs20.x
   uses: "./apply_decision/entry.js"

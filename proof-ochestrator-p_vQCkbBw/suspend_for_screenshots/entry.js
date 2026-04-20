@@ -1,7 +1,5 @@
-// Read rendered HTML from the braze-render callback (previous suspend's
-// resume data), then suspend again and POST to email-test-api.
-// When email-test-api delivers screenshots to the resume_url, the
-// workflow resumes and the next step reads $.context.resume.body.
+// Read rendered HTML from the braze-render resume data, then suspend
+// and POST to email-test-api for screenshots.
 //
 // Timeout: 20 minutes (email-test-api polls EOA for up to 15 min).
 
@@ -14,23 +12,23 @@ export default defineComponent({
       label: "Email Test API Workflow URL",
       description: "HTTP trigger URL for email-test-api workflow",
     },
+    renderedHtml: {
+      type: "string",
+      label: "Rendered HTML",
+      description: "From braze-render resume data",
+    },
+    subject: {
+      type: "string",
+      label: "Subject",
+      optional: true,
+    },
   },
-  async run({ steps, $ }) {
-    // Resume data from braze-render callback
-    const resumeBody = $.context?.resume?.body;
-    const rendered_html = resumeBody?.rendered_html;
-
-    if (!rendered_html) {
-      console.log("Resume context:", JSON.stringify($.context?.resume, null, 2));
-      throw new Error(
-        "No rendered_html in resume body — braze-render callback may have failed"
-      );
+  async run({ $ }) {
+    if (!this.renderedHtml) {
+      throw new Error("No rendered_html — braze-render callback may have failed");
     }
 
-    const subject =
-      resumeBody?.subject ||
-      steps.suspend_for_render?.$return_value?.subject ||
-      `proof_${Date.now()}`;
+    const subject = this.subject || `proof_${Date.now()}`;
 
     const { resume_url } = $.flow.suspend(20 * 60 * 1000); // 20 min
 
@@ -39,13 +37,13 @@ export default defineComponent({
       url: this.email_test_api_url,
       headers: { "Content-Type": "application/json" },
       data: {
-        html_body: rendered_html,
+        html_body: this.renderedHtml,
         subject,
         callback_url: resume_url,
       },
     });
 
     $.export("$summary", `Suspended — waiting for email-test-api callback`);
-    return { subject, rendered_html, waiting_for: "email_test_api" };
+    return { subject, rendered_html: this.renderedHtml, waiting_for: "email_test_api" };
   },
 });
