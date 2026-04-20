@@ -249,7 +249,7 @@ export default defineComponent({
           type: "card",
           hero_image: {
             type: "image",
-            image_url: f.originalUrl || `https://lh3.googleusercontent.com/d/${f.id}`,
+            image_url: `https://lh3.googleusercontent.com/d/${f.id}`,
             alt_text: f.client || f.name,
           },
           title: { type: "mrkdwn", text: f.client || f.name },
