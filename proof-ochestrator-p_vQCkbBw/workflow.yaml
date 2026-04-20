@@ -102,12 +102,16 @@ steps:
   runtime: nodejs20.x
   uses: "./fetch_ai_content/entry.js"
   props:
+    braze:
+      authProvisionId: apn_6LhOGA9
     newsletterKey: "{{steps.check_config.$return_value.newsletter_key}}"
     contentPrepResume: "{{steps.suspend_for_content_prep.$resume_data?.body}}"
 - namespace: suspend_and_post_proof
   runtime: nodejs20.x
   uses: "./suspend_and_post_proof/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
     config: "{{steps.check_config.$return_value}}"
     driveFiles: "{{steps.upload_multiple_screenshots_to_drive.$return_value?.uploadedFiles}}"
     verifyResult: "{{steps.verify_proof.$return_value}}"
@@ -118,6 +122,8 @@ steps:
   runtime: nodejs20.x
   uses: "./extract_decision/entry.js"
   props:
+    braze:
+      authProvisionId: apn_6LhOGA9
     config: "{{steps.check_config.$return_value}}"
     runId: "{{steps.suspend_and_post_proof.$return_value?.run_id}}"
     resumeData: "{{steps.suspend_and_post_proof.$resume_data}}"
@@ -149,6 +155,8 @@ steps:
   runtime: nodejs20.x
   uses: "./notify_decision/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
     decision: "{{steps.extract_decision.$return_value.decision}}"
     channel: "{{steps.suspend_and_post_proof.$return_value?.channel}}"
     threadTs: "{{steps.suspend_and_post_proof.$return_value?.ts}}"
