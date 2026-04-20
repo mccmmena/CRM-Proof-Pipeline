@@ -12,8 +12,6 @@ steps:
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
   props:
-    snowflake:
-      authProvisionId: apn_yghdQYJ
     sql:
       value: |-
         SELECT NEWSLETTER_KEY, DISPLAY_NAME, BRAZE_CATALOG_ID, SLACK_CHANNEL_ID
@@ -51,8 +49,6 @@ steps:
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
   props:
-    braze:
-      authProvisionId: apn_1Khpe1W
     app_id: 3f5340d5-1868-4fc0-b783-b36dd6185ab6
     scheduledItem: "{{steps.trigger.event.body}}"
     subject: "{{steps.trigger.event.body.name}}_{{steps.trigger.context.id}}"
@@ -79,8 +75,6 @@ steps:
   runtime: nodejs20.x
   uses: "./upload_multiple_screenshots_to_drive/entry.js"
   props:
-    google_drive:
-      authProvisionId: apn_mnh5B9x
     screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
     messageName: "{{steps.trigger.event.body.name}}"
@@ -88,8 +82,6 @@ steps:
   runtime: nodejs20.x
   uses: "./verify_proof/entry.js"
   props:
-    openai:
-      authProvisionId: apn_QPhO4kd
     renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
     screenshots: "{{steps.extract_screenshots.$return_value?.screenshots}}"
     subject: "{{steps.extract_screenshots.$return_value?.realSubject || steps.trigger.event.body.name}}"
@@ -125,8 +117,6 @@ steps:
   runtime: nodejs20.x
   uses: snowflake-execute-sql-query@0.2.3
   props:
-    snowflake:
-      authProvisionId: apn_yghdQYJ
     sql:
       value: |-
         UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
