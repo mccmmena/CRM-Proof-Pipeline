@@ -99,8 +99,9 @@ export default defineComponent({
 
     const sendTime = new Date(this.nextSendTime).toLocaleString("en-US", {
       timeZone: "America/New_York",
-      dateStyle: "medium",
-      timeStyle: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
     });
 
     const aiSubject = aiContent.ai_subject || "";
@@ -125,7 +126,7 @@ export default defineComponent({
 
     const parent = await this.postSlack($, {
       channel,
-      text: `${statusEmoji} Proof for *${config.display_name}*\nSends at ${sendTime}`,
+      text: `${statusEmoji} *${config.display_name}* Proof _(${sendTime} send)_`,
     });
 
     const threadTs = parent.ts;
