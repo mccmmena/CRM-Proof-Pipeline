@@ -16,16 +16,15 @@
 
 const DEFAULT_FIELDS = [
   "title:string",
-  "deck:string",
-  "image_url:string",
-  "article_url:string",
-  "byline:string",
-  "published_at:string",
-  "active:boolean",
-  "ai_subject:string",
-  "ai_intro:string",
-  "run_id:string",
-  "generated_at:string",
+  "description:string",
+  "url:string",
+  "thumbnail:string",
+  "thumbnail_alt:string",
+  "section_name:string",
+  "section_url:string",
+  "tags:string",
+  "publication_date:string",
+  "rank:string",
 ];
 
 export default defineComponent({
