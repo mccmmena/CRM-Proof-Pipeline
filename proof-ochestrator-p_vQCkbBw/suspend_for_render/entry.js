@@ -32,7 +32,7 @@ export default defineComponent({
       throw new Error("No email body from resolve_braze_details");
     }
 
-    const { resume_url } = $.flow.suspend(10 * 60 * 1000); // 10 min
+    const { resume_url, cancel_url } = $.flow.suspend(10 * 60 * 1000); // 10 min
 
     const payload = {
       liquid: this.emailBody,
@@ -49,6 +49,6 @@ export default defineComponent({
     });
 
     $.export("$summary", `Suspended — waiting for braze-render callback`);
-    return { subject: this.emailSubject, waiting_for: "braze_render" };
+    return { subject: this.emailSubject, waiting_for: "braze_render", cancel_url };
   },
 });

@@ -20,7 +20,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
-    const { resume_url } = $.flow.suspend(15 * 60 * 1000); // 15 min timeout
+    const { resume_url, cancel_url } = $.flow.suspend(15 * 60 * 1000); // 15 min timeout
 
     await axios($, {
       method: "POST",
@@ -34,6 +34,6 @@ export default defineComponent({
     });
 
     $.export("$summary", `Suspended — waiting for content-prep callback`);
-    return { triggered: true, newsletter_key: this.newsletterKey };
+    return { triggered: true, newsletter_key: this.newsletterKey, cancel_url };
   },
 });

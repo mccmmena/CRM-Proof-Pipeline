@@ -4,4 +4,11 @@ settings:
   error_notification: true
 triggers:
 - id: hi_nlHnDkp
-
+steps:
+- namespace: post_error_to_slack
+  runtime: nodejs20.x
+  uses: "./post_error_to_slack/entry.js"
+  props:
+    slack:
+      authProvisionId: apn_OghQ5eO
+    channel: C093AK8TU00

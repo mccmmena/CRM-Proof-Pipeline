@@ -113,7 +113,7 @@ export default defineComponent({
     }
 
     // Get the resume URL before posting (workflow suspends at step end)
-    const { resume_url } = $.flow.suspend(timeoutMs);
+    const { resume_url, cancel_url } = $.flow.suspend(timeoutMs);
     const approveUrl = `${resume_url}?decision=approve`;
     const rejectUrl = `${resume_url}?decision=reject`;
 
@@ -281,6 +281,7 @@ export default defineComponent({
       channel: parent.channel,
       ts: threadTs,
       timeoutMs,
+      cancel_url,
     };
   },
 });

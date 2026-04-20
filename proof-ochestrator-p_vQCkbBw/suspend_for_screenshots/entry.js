@@ -29,7 +29,7 @@ export default defineComponent({
       throw new Error("No rendered_html — braze-render callback may have failed");
     }
 
-    const { resume_url } = $.flow.suspend(20 * 60 * 1000); // 20 min
+    const { resume_url, cancel_url } = $.flow.suspend(20 * 60 * 1000); // 20 min
 
     const payload = {
       html_body: this.renderedHtml,
@@ -45,6 +45,6 @@ export default defineComponent({
     });
 
     $.export("$summary", `Suspended — waiting for email-test-api callback`);
-    return { rendered_html: this.renderedHtml, waiting_for: "email_test_api" };
+    return { rendered_html: this.renderedHtml, waiting_for: "email_test_api", cancel_url };
   },
 });
