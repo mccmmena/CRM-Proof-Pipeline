@@ -121,7 +121,7 @@ steps:
       params:
       - "{{steps.parse_ghostwriter.$return_value.ai_subject}}"
       - "{{steps.parse_ghostwriter.$return_value.ai_intro}}"
-      - "elvex"
+      - elvex
       - "{{JSON.stringify(steps.ghostwriter.$return_value)}}"
       - "{{steps.write_run_history.$return_value.run_id}}"
 - namespace: write_ai_to_history
