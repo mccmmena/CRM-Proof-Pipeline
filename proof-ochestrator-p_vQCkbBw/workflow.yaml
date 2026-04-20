@@ -83,7 +83,7 @@ steps:
       authProvisionId: apn_mnh5B9x
     screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
-    messageName: "{{steps.extract_screenshots.$return_value?.realSubject || steps.trigger.event.body.name}}"
+    messageName: "{{steps.trigger.event.body.name}}"
 - namespace: verify_proof
   runtime: nodejs20.x
   uses: "./verify_proof/entry.js"
