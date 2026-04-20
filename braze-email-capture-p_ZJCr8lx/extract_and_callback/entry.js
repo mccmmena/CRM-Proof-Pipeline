@@ -1,7 +1,17 @@
 import { axios } from "@pipedream/platform";
+import { simpleParser } from "mailparser";
 
 const DEBUG_URL =
   "https://d4d4b1bae33e32bf860167b3d64346cc.m.pipedream.net";
+
+// Minify HTML — strip comments (preserve pipedream-callback), collapse whitespace
+function minifyHtml(html) {
+  return html
+    .replace(/<!--(?!.*?pipedream-callback).*?-->/gs, "")
+    .replace(/\s+/g, " ")
+    .replace(/>\s+</g, "><")
+    .trim();
+}
 
 export default defineComponent({
   async run({ steps, $ }) {
@@ -15,29 +25,40 @@ export default defineComponent({
       email?.headers?.subject ||
       "";
 
-    // Pipedream email trigger exposes parsed body at email.body
-    // It may be a string (HTML/text) or an object with html/text fields.
-    // When the HTML exceeds Pipedream's 100KB limit, body.htmlTruncated is
-    // set and body.htmlUrl contains a pre-signed S3 URL with the full content.
+    // Pipedream truncates body.html at 100KB. The htmlUrl S3 file is also
+    // truncated. The only reliable source of full HTML is the raw MIME email
+    // available at rawUrl. Fall back to body.html if rawUrl isn't available.
     let rendered_html = "";
-    if (typeof email.body === "string") {
+
+    if (email.body?.htmlTruncated && email.rawUrl) {
+      console.log("HTML truncated — parsing full content from raw MIME");
+      try {
+        const rawEmail = await axios($, {
+          method: "GET",
+          url: email.rawUrl,
+          responseType: "arraybuffer",
+        });
+        const parsed = await simpleParser(Buffer.from(rawEmail));
+        rendered_html = parsed.html || parsed.textAsHtml || "";
+        console.log(`Parsed ${rendered_html.length} bytes from raw MIME`);
+      } catch (e) {
+        console.error("Raw MIME parse failed, falling back to body.html:", e.message);
+        rendered_html = email.body?.html || "";
+      }
+    } else if (typeof email.body === "string") {
       rendered_html = email.body;
     } else if (email.body && typeof email.body === "object") {
-      if (email.body.htmlTruncated && email.body.htmlUrl) {
-        console.log("HTML truncated — fetching full content from htmlUrl");
-        rendered_html = await axios($, {
-          method: "GET",
-          url: email.body.htmlUrl,
-          responseType: "text",
-        });
-      } else {
-        rendered_html =
-          email.body.html || email.body.text || JSON.stringify(email.body);
-      }
+      rendered_html =
+        email.body.html || email.body.text || JSON.stringify(email.body);
     } else {
       rendered_html =
         email.html || email.text || email.htmlBody || email.textBody || "";
     }
+
+    // Minify to reduce payload size through downstream HTTP hops
+    const originalSize = rendered_html.length;
+    rendered_html = minifyHtml(rendered_html);
+    console.log(`Minified HTML: ${originalSize} → ${rendered_html.length} bytes`);
 
     // Always POST debug info so we can see what the trigger provides
     const eventKeys = Object.keys(email || {});
