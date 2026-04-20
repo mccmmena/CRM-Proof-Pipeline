@@ -16,13 +16,24 @@ export default defineComponent({
       "";
 
     // Pipedream email trigger exposes parsed body at email.body
-    // It may be a string (HTML/text) or an object with html/text fields
+    // It may be a string (HTML/text) or an object with html/text fields.
+    // When the HTML exceeds Pipedream's 100KB limit, body.htmlTruncated is
+    // set and body.htmlUrl contains a pre-signed S3 URL with the full content.
     let rendered_html = "";
     if (typeof email.body === "string") {
       rendered_html = email.body;
     } else if (email.body && typeof email.body === "object") {
-      rendered_html =
-        email.body.html || email.body.text || JSON.stringify(email.body);
+      if (email.body.htmlTruncated && email.body.htmlUrl) {
+        console.log("HTML truncated — fetching full content from htmlUrl");
+        rendered_html = await axios($, {
+          method: "GET",
+          url: email.body.htmlUrl,
+          responseType: "text",
+        });
+      } else {
+        rendered_html =
+          email.body.html || email.body.text || JSON.stringify(email.body);
+      }
     } else {
       rendered_html =
         email.html || email.text || email.htmlBody || email.textBody || "";
