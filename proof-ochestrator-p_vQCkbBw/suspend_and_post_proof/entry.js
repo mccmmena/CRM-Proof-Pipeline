@@ -117,23 +117,9 @@ export default defineComponent({
     const rejectUrl = `${resume_url}?decision=reject`;
 
     // ── Parent message (channel) ────────────────────────────────────────
-    const parentBlocks = [
-      {
-        type: "header",
-        text: { type: "plain_text", text: `${config.display_name} — Proof Ready` },
-      },
-      {
-        type: "section",
-        fields: [
-          { type: "mrkdwn", text: `*Sends:*\n${sendTime}` },
-        ],
-      },
-    ];
-
     const parent = await this.postSlack($, {
       channel,
-      text: `Proof ready for ${config.display_name}`,
-      blocks: parentBlocks,
+      text: `Proof for *${config.display_name}*\nSends at ${sendTime}`,
     });
 
     const threadTs = parent.ts;

@@ -44,9 +44,13 @@ function extractLinks(html) {
     seen.add(url);
     // Strip HTML tags from anchor content to get readable text
     const anchorText = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    // Skip links that only wrap images — the AI checks broken images visually
-    if (!anchorText) continue;
-    links.push({ url, anchor: anchorText });
+    // For image-only links, try to extract alt text for context
+    if (!anchorText) {
+      const altMatch = match[2].match(/alt="([^"]+)"/);
+      links.push({ url, anchor: altMatch ? `image: ${altMatch[1]}` : "(image link)" });
+    } else {
+      links.push({ url, anchor: anchorText });
+    }
   }
   return links;
 }
