@@ -83,6 +83,16 @@ export default defineComponent({
       throw new Error(`No email message found in ${isCanvas ? "canvas" : "campaign"} "${name}"`);
     }
 
+    // Replace canvas.name references with the actual name.
+    // When sent via /messages/send instead of through the canvas,
+    // Braze doesn't resolve canvas.* variables — we do it ourselves.
+    body = body.replace(/\{\{\s*canvas\.name\s*\}\}/g, name);
+    body = body.replace(/canvas\.name/g, name);
+    if (subject) {
+      subject = subject.replace(/\{\{\s*canvas\.name\s*\}\}/g, name);
+      subject = subject.replace(/canvas\.name/g, name);
+    }
+
     $.export("$summary", `Resolved ${isCanvas ? "canvas" : "campaign"} "${name}"`);
     return { name, email: { body, subject } };
   },
