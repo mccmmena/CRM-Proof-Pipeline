@@ -9,11 +9,28 @@
 
 import { axios } from "@pipedream/platform";
 
-const DEFAULT_CLIENTS = ["iphone16_spacegray_16", "gmail", "outlookcom"];
+const DEFAULT_CLIENTS = ["iphone16_18", "gmailcom-lm", "m365_w11_lm"];
 const LINK_TIMEOUT_MS = 5000;
 const MAX_LINKS = 30;
 
 // ── Link verification ──────────────────────────────────────────────────
+
+// Domains that commonly fail HEAD checks but are fine in practice
+const SKIP_DOMAINS = [
+  "fonts.googleapis.com",
+  "fonts.gstatic.com",
+  "clicks.mcclatchydc.com",
+  "braze.com",
+];
+
+function shouldSkipUrl(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return SKIP_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
 
 function extractLinks(html) {
   const seen = new Set();
@@ -24,6 +41,7 @@ function extractLinks(html) {
     const url = match[1].trim();
     if (!url || url.startsWith("mailto:") || url.startsWith("#") || url.startsWith("tel:")) continue;
     if (seen.has(url)) continue;
+    if (shouldSkipUrl(url)) continue;
     seen.add(url);
     links.push(url);
   }
@@ -94,7 +112,7 @@ Return STRICT JSON with exactly this structure:
 {
   "needs_review": true or false,
   "issues": [
-    { "type": "rendering|content|link", "severity": "high|medium|low", "description": "..." }
+    { "type": "rendering|content|link", "severity": "high|medium|low", "description": "...", "location": "..." }
   ],
   "summary": "One-sentence overall assessment"
 }
@@ -104,6 +122,8 @@ Rules:
 - needs_review should be FALSE if the proof looks clean and professional
 - Be practical: minor cosmetic differences between email clients are expected and not issues
 - Empty issues array is fine when the proof looks good
+- "location" should pinpoint WHERE in the email the issue appears (e.g. "hero image", "story 3 thumbnail", "footer links", "subject line")
+- "description" should say WHAT is wrong concisely — avoid vague phrasing
 - Do not include any text outside the JSON object`;
 }
 

@@ -195,7 +195,10 @@ export default defineComponent({
     if (verifyResult?.issues?.length > 0) {
       const severityIcon = { high: ":red_circle:", medium: ":warning:", low: ":white_circle:" };
       const issueLines = verifyResult.issues
-        .map((i) => `${severityIcon[i.severity] || ":warning:"} [${i.type}] ${i.description}`)
+        .map((i) => {
+          const loc = i.location ? ` — _${i.location}_` : "";
+          return `${severityIcon[i.severity] || ":warning:"} ${i.description}${loc}`;
+        })
         .join("\n");
       verifyLines.push(`*Issues Found:*\n${issueLines}`);
     } else {
@@ -212,24 +215,29 @@ export default defineComponent({
       text: verifyLines.join("\n\n"),
     });
 
-    // ── Reply 3: Screenshots (side-by-side via section+accessory) ──────
+    // ── Reply 3: Screenshots (full-width images) ──────────────────────
     if (driveFiles.length > 0) {
-      const imageBlocks = driveFiles.slice(0, 2).map((f) => ({
-        type: "section",
-        text: { type: "mrkdwn", text: `*${f.client || f.name}*` },
-        accessory: {
+      const imageBlocks = [];
+      for (const f of driveFiles) {
+        imageBlocks.push({
           type: "image",
           image_url: `https://drive.google.com/uc?export=view&id=${f.id}`,
           alt_text: f.client || f.name,
-        },
-      }));
+          title: { type: "plain_text", text: f.client || f.name },
+        });
+      }
 
-      await this.postSlack($, {
-        channel,
-        thread_ts: threadTs,
-        text: "Screenshots",
-        blocks: imageBlocks,
-      });
+      // Slack blocks limit is 50 — post in batches if needed
+      const BATCH = 20;
+      for (let i = 0; i < imageBlocks.length; i += BATCH) {
+        await this.postSlack($, {
+          channel,
+          thread_ts: threadTs,
+          text: "Screenshots",
+          blocks: imageBlocks.slice(i, i + BATCH),
+          unfurl_media: false,
+        });
+      }
     }
 
     $.export(
