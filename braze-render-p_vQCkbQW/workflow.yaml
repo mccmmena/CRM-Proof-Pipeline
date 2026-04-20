@@ -10,6 +10,7 @@ steps:
   runtime: nodejs20.x
   uses: "./validate_and_respond/entry.js"
 - namespace: store_callback
+  disabled: true
   runtime: nodejs20.x
   uses: "./store_callback/entry.js"
   props:

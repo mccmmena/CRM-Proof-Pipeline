@@ -4,11 +4,6 @@ const DEBUG_URL =
   "https://d4d4b1bae33e32bf860167b3d64346cc.m.pipedream.net";
 
 export default defineComponent({
-  props: {
-    data: {
-      type: "data_store",
-    },
-  },
   async run({ steps, $ }) {
     const email = steps.trigger.event;
 
@@ -61,26 +56,14 @@ export default defineComponent({
       return $.flow.exit("No subject");
     }
 
-    // Extract the render key from the HTML comment injected by braze-render
-    const keyMatch = rendered_html.match(/<!-- pipedream-render-key:(.+?) -->/);
-    const renderKey = keyMatch?.[1];
+    // Extract the callback URL from the HTML comment injected by braze-render
+    const callbackMatch = rendered_html.match(/<!-- pipedream-callback:(.+?) -->/);
+    const callback_url = callbackMatch?.[1];
 
-    if (!renderKey) {
-      $.export("$summary", `No render key found in email body`);
-      return $.flow.exit("No render key in body");
+    if (!callback_url) {
+      $.export("$summary", `No callback URL found in email body`);
+      return $.flow.exit("No callback URL in body");
     }
-
-    const entry = await this.data.get(renderKey);
-
-    if (!entry || !entry.callback_url) {
-      $.export(
-        "$summary",
-        `No callback registered for key: ${renderKey}`
-      );
-      return $.flow.exit("No callback found");
-    }
-
-    const { callback_url } = entry;
 
     await axios($, {
       method: "POST",
@@ -93,11 +76,8 @@ export default defineComponent({
       },
     });
 
-    // Clean up the data store entry
-    await this.data.delete(renderKey);
+    $.export("$summary", `Posted rendered HTML for "${subject}" to callback`);
 
-    $.export("$summary", `Posted rendered HTML for "${subject}" (key: ${renderKey}) to callback`);
-
-    return { callback_status: "delivered", subject, renderKey };
+    return { callback_status: "delivered", subject };
   },
 });
