@@ -51,7 +51,7 @@ export default defineComponent({
     }
 
     // Extract the first email message from the response
-    let body, subject;
+    let body, subject, preheader;
 
     if (isCanvas) {
       // Canvas: steps[] → find first step with an email message variant
@@ -62,6 +62,7 @@ export default defineComponent({
           if (variant.channel === "email" && variant.body) {
             body = variant.body;
             subject = variant.subject;
+            preheader = variant.preheader || "";
             break;
           }
         }
@@ -74,6 +75,7 @@ export default defineComponent({
         if (variant.channel === "email" && variant.body) {
           body = variant.body;
           subject = variant.subject;
+          preheader = variant.preheader || "";
           break;
         }
       }
@@ -94,6 +96,6 @@ export default defineComponent({
     }
 
     $.export("$summary", `Resolved ${isCanvas ? "canvas" : "campaign"} "${name}"`);
-    return { name, email: { body, subject } };
+    return { name, email: { body, subject, preheader } };
   },
 });

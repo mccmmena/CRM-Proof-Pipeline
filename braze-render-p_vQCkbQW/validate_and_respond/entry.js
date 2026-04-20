@@ -49,15 +49,18 @@ export default defineComponent({
     const external_user_ids =
       body.external_user_ids || DEFAULTS.external_user_ids;
 
+    const emailMessage = {
+      app_id: DEFAULTS.braze_app_id,
+      subject,
+      from: `${from_name} <${from_email}>`,
+      body: taggedBody,
+    };
+    if (body.preheader) emailMessage.preheader = body.preheader;
+
     const braze_payload = {
       external_user_ids,
       messages: {
-        email: {
-          app_id: DEFAULTS.braze_app_id,
-          subject,
-          from: `${from_name} <${from_email}>`,
-          body: taggedBody,
-        },
+        email: emailMessage,
       },
     };
 

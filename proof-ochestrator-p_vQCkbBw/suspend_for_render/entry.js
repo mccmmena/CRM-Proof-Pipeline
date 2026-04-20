@@ -21,6 +21,11 @@ export default defineComponent({
       type: "string",
       label: "Email Subject",
     },
+    emailPreheader: {
+      type: "string",
+      label: "Email Preheader",
+      optional: true,
+    },
   },
   async run({ $ }) {
     if (!this.emailBody) {
@@ -29,15 +34,18 @@ export default defineComponent({
 
     const { resume_url } = $.flow.suspend(10 * 60 * 1000); // 10 min
 
+    const payload = {
+      liquid: this.emailBody,
+      subject: this.emailSubject,
+      callback_url: resume_url,
+    };
+    if (this.emailPreheader) payload.preheader = this.emailPreheader;
+
     await axios($, {
       method: "POST",
       url: this.braze_render_url,
       headers: { "Content-Type": "application/json" },
-      data: {
-        liquid: this.emailBody,
-        subject: this.emailSubject,
-        callback_url: resume_url,
-      },
+      data: payload,
     });
 
     $.export("$summary", `Suspended — waiting for braze-render callback`);

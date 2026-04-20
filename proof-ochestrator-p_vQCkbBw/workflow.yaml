@@ -60,6 +60,7 @@ steps:
     braze_render_url: https://eov0l2spkm1h5vp.m.pipedream.net
     emailBody: "{{steps.resolve_braze_details.$return_value.email.body}}"
     emailSubject: "{{steps.resolve_braze_details.$return_value.email.subject}}"
+    emailPreheader: "{{steps.resolve_braze_details.$return_value.email.preheader}}"
 - namespace: suspend_for_screenshots
   runtime: nodejs20.x
   uses: "./suspend_for_screenshots/entry.js"
