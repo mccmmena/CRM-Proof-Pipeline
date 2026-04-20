@@ -44,10 +44,12 @@ function extractLinks(html) {
     seen.add(url);
     // Strip HTML tags from anchor content to get readable text
     const anchorText = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    // Skip image-only links through tracking redirectors — they time out
-    // outside of a real email open context and aren't user-facing links
-    if (!anchorText) continue;
-    links.push({ url, anchor: anchorText });
+    if (!anchorText) {
+      const altMatch = match[2].match(/alt="([^"]+)"/);
+      links.push({ url, anchor: altMatch ? `image: ${altMatch[1]}` : "(image link)" });
+    } else {
+      links.push({ url, anchor: anchorText });
+    }
   }
   return links;
 }

@@ -211,8 +211,9 @@ export default defineComponent({
       const linkLines = linkResults.failures
         .slice(0, 5)
         .map((f) => {
-          const label = f.anchor ? `"${f.anchor}"` : f.finalUrl || f.url;
-          return `• ${label} → ${f.error || `HTTP ${f.status}`}`;
+          const label = f.anchor ? `"${f.anchor}"` : "(link)";
+          const dest = f.finalUrl && f.finalUrl !== f.url ? f.finalUrl : f.url;
+          return `• ${label} → ${f.error || `HTTP ${f.status}`}\n   ${dest}`;
         })
         .join("\n");
       verifyLines.push(`*Link Issues (${linkResults.failures.length} of ${linkResults.checked}):*\n${linkLines}`);
