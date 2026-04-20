@@ -74,6 +74,7 @@ steps:
   uses: "./extract_screenshots/entry.js"
   props:
     resumeData: "{{steps.suspend_for_screenshots.$resume_data?.body}}"
+    renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
 - namespace: upload_multiple_screenshots_to_drive
   runtime: nodejs20.x
   uses: "./upload_multiple_screenshots_to_drive/entry.js"
@@ -82,7 +83,7 @@ steps:
       authProvisionId: apn_mnh5B9x
     screenshots: "{{steps.extract_screenshots.$return_value.screenshots}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
-    messageName: "{{steps.trigger.event.body.name}}"
+    messageName: "{{steps.extract_screenshots.$return_value?.realSubject || steps.trigger.event.body.name}}"
 - namespace: verify_proof
   runtime: nodejs20.x
   uses: "./verify_proof/entry.js"
@@ -91,7 +92,7 @@ steps:
       authProvisionId: apn_QPhO4kd
     renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
     screenshots: "{{steps.extract_screenshots.$return_value?.screenshots}}"
-    subject: "{{steps.suspend_for_screenshots.$return_value?.subject || steps.trigger.event.body.name}}"
+    subject: "{{steps.extract_screenshots.$return_value?.realSubject || steps.trigger.event.body.name}}"
 - namespace: filter
   runtime: nodejs20.x
   uses: "./filter/entry.js"

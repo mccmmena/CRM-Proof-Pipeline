@@ -101,7 +101,7 @@ export default defineComponent({
     console.log(`Using campaign folder: ${campaignFolder.name} (${campaignFolder.id})`)
 
     for (let i = 0; i < this.screenshots.length; i++) {
-      const { client, url: screenshotUrl } = this.screenshots[i]
+      const { client, url: screenshotUrl, name: displayName } = this.screenshots[i]
 
       // Skip if missing required data
       if (!client || !screenshotUrl) {
@@ -128,8 +128,8 @@ export default defineComponent({
         const fileNameFromUrl = cleanUrl.split('/').pop()
         const extension = fileNameFromUrl.includes('.') ? fileNameFromUrl.split('.').pop() : 'png'
 
-        // Create filename using the client name
-        const finalFileName = `${client}.${extension}`
+        // Create filename using the friendly display name (falls back to client ID)
+        const finalFileName = `${displayName || client}.${extension}`
 
         // Determine MIME type based on extension
         const mimeTypeMap = {
