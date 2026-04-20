@@ -192,21 +192,35 @@ export default defineComponent({
     // ── Reply 2: QC verification ────────────────────────────────────────
     const verifyLines = [];
 
+    // Visual issues from AI
     if (verifyResult?.issues?.length > 0) {
       const severityIcon = { high: ":red_circle:", medium: ":warning:", low: ":white_circle:" };
       const issueLines = verifyResult.issues
         .map((i) => {
           const loc = i.location ? ` — _${i.location}_` : "";
-          return `${severityIcon[i.severity] || ":warning:"} ${i.description}${loc}`;
+          const client = i.client && i.client !== "all" ? ` (${i.client})` : "";
+          return `${severityIcon[i.severity] || ":warning:"} ${i.description}${loc}${client}`;
         })
         .join("\n");
-      verifyLines.push(`*Issues Found:*\n${issueLines}`);
+      verifyLines.push(`*Visual Issues:*\n${issueLines}`);
     } else {
-      verifyLines.push(`:large_green_circle: *Proof passed automated QC* — no rendering issues detected`);
+      verifyLines.push(`:large_green_circle: *No visual issues detected*`);
+    }
+
+    // Link check results (separate from AI)
+    const linkResults = verifyResult?.link_results;
+    if (linkResults?.failures?.length > 0) {
+      const linkLines = linkResults.failures
+        .slice(0, 5)
+        .map((f) => `• ${f.finalUrl || f.url} → ${f.error || `HTTP ${f.status}`}`)
+        .join("\n");
+      verifyLines.push(`*Link Issues (${linkResults.failures.length} of ${linkResults.checked}):*\n${linkLines}`);
+    } else if (linkResults) {
+      verifyLines.push(`:link: All ${linkResults.checked} links OK`);
     }
 
     if (verifyResult?.summary) {
-      verifyLines.push(`_AI Assessment: ${verifyResult.summary}_`);
+      verifyLines.push(`_${verifyResult.summary}_`);
     }
 
     await this.postSlack($, {

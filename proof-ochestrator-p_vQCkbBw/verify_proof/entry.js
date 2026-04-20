@@ -96,33 +96,36 @@ function htmlToPlaintext(html) {
 // ── OpenAI vision + reasoning ──────────────────────────────────────────
 
 function buildSystemPrompt() {
-  return `You are an email QA specialist reviewing proofs before they are sent to subscribers.
-You will receive:
-1. Screenshot images of the email as rendered in various email clients
-2. The plaintext content of the email
-3. Link verification results (which URLs failed, if any)
+  return `You are an email QA specialist visually reviewing newsletter screenshots before they are sent to subscribers.
 
-Evaluate the proof for:
-- **Rendering issues**: broken layout, overlapping text, missing or broken images, clipped content, alignment problems
-- **Content issues**: placeholder text (e.g., "Lorem ipsum", "[INSERT]", "{{"), empty sections, encoding artifacts, garbled characters
-- **Link issues**: broken links (4xx/5xx), timeouts, malformed URLs — use the provided link check results
+You will receive screenshot images of the same email rendered in different email clients (iPhone, Gmail, Outlook, Apple Mail, etc.). Focus ONLY on what you can SEE in the screenshots.
 
-Return STRICT JSON with exactly this structure:
+Look for:
+- **Broken layout**: misaligned columns, overlapping elements, content overflowing containers
+- **Missing images**: broken image icons, empty boxes where images should be, missing thumbnails
+- **Text problems**: garbled characters, encoding artifacts, unrendered template tags (e.g. "{{"), placeholder text
+- **Clipped content**: email cut off abruptly, missing sections that appear in other clients
+- **Dark mode issues**: unreadable text, invisible elements, colors that break in dark mode variants
+
+Do NOT flag:
+- Minor cosmetic differences between email clients (expected)
+- Preheader text appearing at the top of the email (normal behavior)
+- Slight font or spacing variations across clients
+
+Return STRICT JSON:
 {
   "needs_review": true or false,
   "issues": [
-    { "type": "rendering|content|link", "severity": "high|medium|low", "description": "...", "location": "..." }
+    { "severity": "high|medium|low", "description": "...", "location": "...", "client": "..." }
   ],
   "summary": "One-sentence overall assessment"
 }
 
 Rules:
-- needs_review should be TRUE if there are any high-severity issues, or 2+ medium-severity issues
-- needs_review should be FALSE if the proof looks clean and professional
-- Be practical: minor cosmetic differences between email clients are expected and not issues
+- needs_review = TRUE only for issues a human should see before send
+- "location" = where in the email (e.g. "hero image", "story 3 card", "footer")
+- "client" = which email client screenshot shows the issue (or "all" if universal)
 - Empty issues array is fine when the proof looks good
-- "location" should pinpoint WHERE in the email the issue appears (e.g. "hero image", "story 3 thumbnail", "footer links", "subject line")
-- "description" should say WHAT is wrong concisely — avoid vague phrasing
 - Do not include any text outside the JSON object`;
 }
 
@@ -144,28 +147,17 @@ function selectScreenshots(allScreenshots, preferredClients) {
   return selected;
 }
 
-function buildUserContent({ plaintext, subject, linkResults, screenshots }) {
+function buildUserContent({ subject, screenshots }) {
   const parts = [];
 
-  let textBlock = `**Subject line:** ${subject || "(none)"}\n\n**Plaintext content:**\n${plaintext.slice(0, 3000)}`;
-
-  if (linkResults.failures.length > 0) {
-    const failLines = linkResults.failures
-      .map((f) => `- ${f.url} → ${f.error || `HTTP ${f.status}`}`)
-      .join("\n");
-    textBlock += `\n\n**Link check failures (${linkResults.failures.length} of ${linkResults.checked}):**\n${failLines}`;
-  } else {
-    textBlock += `\n\n**Link check:** All ${linkResults.checked} links OK`;
-  }
-
-  parts.push({ type: "text", text: textBlock });
+  parts.push({ type: "text", text: `**Newsletter subject:** ${subject || "(none)"}\n\nReview the following screenshots for visual issues:` });
 
   for (const s of screenshots) {
+    parts.push({ type: "text", text: `**${s.name || s.client}:**` });
     parts.push({
       type: "image_url",
-      image_url: { url: s.url, detail: "low" },
+      image_url: { url: s.url, detail: "high" },
     });
-    parts.push({ type: "text", text: `Screenshot: ${s.client}` });
   }
 
   return parts;
@@ -206,25 +198,20 @@ export default defineComponent({
       return { needs_review: false, issues: [], summary: "No rendered HTML available to verify", link_results: null, screenshots_analyzed: [] };
     }
 
-    // 1. Link verification
+    // 1. Link verification (reported separately, not sent to AI)
     const linkResults = await verifyLinks(rendered_html);
     console.log(`Checked ${linkResults.checked} links, ${linkResults.failures.length} failures`);
 
-    // 2. Content extraction
-    const plaintext = htmlToPlaintext(rendered_html);
-
-    // 3. Select representative screenshots for vision analysis
+    // 2. Select representative screenshots for vision analysis
     const selectedScreenshots = selectScreenshots(screenshots, DEFAULT_CLIENTS);
 
     if (selectedScreenshots.length === 0) {
       console.warn("No screenshots available for visual analysis");
     }
 
-    // 4. Call OpenAI GPT-4o
+    // 3. Call OpenAI GPT-4o — visual analysis only
     const userContent = buildUserContent({
-      plaintext,
       subject,
-      linkResults,
       screenshots: selectedScreenshots,
     });
 
