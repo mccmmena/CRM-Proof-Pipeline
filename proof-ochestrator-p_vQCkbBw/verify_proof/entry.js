@@ -33,7 +33,8 @@ function shouldSkipUrl(url) {
 function extractLinks(html) {
   const seen = new Set();
   const links = [];
-  const regex = /href\s*=\s*["']([^"']*?)["']/gi;
+  // Capture the full <a> tag so we can extract anchor text
+  const regex = /<a\s[^>]*href\s*=\s*["']([^"']*?)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = regex.exec(html)) !== null) {
     const url = match[1].trim();
@@ -41,12 +42,14 @@ function extractLinks(html) {
     if (seen.has(url)) continue;
     if (shouldSkipUrl(url)) continue;
     seen.add(url);
-    links.push(url);
+    // Strip HTML tags from anchor content to get readable text
+    const anchorText = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    links.push({ url, anchor: anchorText || "(image link)" });
   }
   return links;
 }
 
-async function checkLink(url) {
+async function checkLink({ url, anchor }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LINK_TIMEOUT_MS);
   try {
@@ -58,21 +61,21 @@ async function checkLink(url) {
       headers: { "User-Agent": "McClatchy-ProofQC/1.0" },
     });
     clearTimeout(timeout);
-    return { url, status: resp.status, ok: resp.ok, redirected: resp.redirected, finalUrl: resp.url };
+    return { url, anchor, status: resp.status, ok: resp.ok, redirected: resp.redirected, finalUrl: resp.url };
   } catch (e) {
     clearTimeout(timeout);
     if (e.name === "AbortError") {
-      return { url, status: null, ok: false, error: "timeout" };
+      return { url, anchor, status: null, ok: false, error: "timeout" };
     }
-    return { url, status: null, ok: false, error: e.message };
+    return { url, anchor, status: null, ok: false, error: e.message };
   }
 }
 
 async function verifyLinks(html) {
-  const urls = extractLinks(html).slice(0, MAX_LINKS);
-  if (urls.length === 0) return { checked: 0, failures: [], results: [] };
+  const links = extractLinks(html).slice(0, MAX_LINKS);
+  if (links.length === 0) return { checked: 0, failures: [], results: [] };
 
-  const results = await Promise.all(urls.map(checkLink));
+  const results = await Promise.all(links.map(checkLink));
   const failures = results.filter((r) => !r.ok);
   return { checked: results.length, failures, results };
 }

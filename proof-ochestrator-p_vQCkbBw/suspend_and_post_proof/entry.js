@@ -212,7 +212,10 @@ export default defineComponent({
     if (linkResults?.failures?.length > 0) {
       const linkLines = linkResults.failures
         .slice(0, 5)
-        .map((f) => `• ${f.finalUrl || f.url} → ${f.error || `HTTP ${f.status}`}`)
+        .map((f) => {
+          const label = f.anchor ? `"${f.anchor}"` : f.finalUrl || f.url;
+          return `• ${label} → ${f.error || `HTTP ${f.status}`}`;
+        })
         .join("\n");
       verifyLines.push(`*Link Issues (${linkResults.failures.length} of ${linkResults.checked}):*\n${linkLines}`);
     } else if (linkResults) {
