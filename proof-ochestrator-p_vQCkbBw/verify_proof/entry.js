@@ -10,17 +10,15 @@
 import { axios } from "@pipedream/platform";
 
 const DEFAULT_CLIENTS = ["iphone16_18", "gmailcom-lm", "m365_w11_lm"];
-const LINK_TIMEOUT_MS = 5000;
+const LINK_TIMEOUT_MS = 10000;
 const MAX_LINKS = 30;
 
 // ── Link verification ──────────────────────────────────────────────────
 
-// Domains that commonly fail HEAD checks but are fine in practice
+// Domains to skip entirely (not worth checking)
 const SKIP_DOMAINS = [
   "fonts.googleapis.com",
   "fonts.gstatic.com",
-  "clicks.mcclatchydc.com",
-  "braze.com",
 ];
 
 function shouldSkipUrl(url) {
@@ -52,8 +50,9 @@ async function checkLink(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LINK_TIMEOUT_MS);
   try {
+    // Use GET — many tracking redirectors (clicks.mcclatchydc.com) reject HEAD
     const resp = await fetch(url, {
-      method: "HEAD",
+      method: "GET",
       redirect: "follow",
       signal: controller.signal,
       headers: { "User-Agent": "McClatchy-ProofQC/1.0" },
