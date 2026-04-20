@@ -45,6 +45,10 @@ export default defineComponent({
       );
     }
 
+    // Respond immediately so the caller (orchestrator) isn't blocked
+    // while we do the slow work (feeds, AI, catalog upsert).
+    await $.respond({ status: 202, body: JSON.stringify({ status: "accepted", newsletter_key: body.newsletter_key }) });
+
     const config = {
       newsletter_key: row.NEWSLETTER_KEY,
       display_name: row.DISPLAY_NAME,
