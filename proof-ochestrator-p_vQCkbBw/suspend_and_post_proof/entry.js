@@ -1,16 +1,10 @@
-// Post the proof message to Slack and suspend the workflow waiting for an
-// approval decision.
+// Build a Block Kit proof message with AI preview, screenshot links,
+// and approve/reject URL buttons, then post to Slack and suspend the
+// workflow until a button click or timeout.
 //
-// Reads AI content from the Braze catalog meta row, builds a Block Kit
-// message with AI preview + screenshot links + two URL buttons
-// (approve/reject), posts to Slack, then calls $.flow.suspend(timeoutMs)
-// to pause the workflow until a button is clicked OR the timeout fires.
+// AI content comes from the fetch_ai_content step (no longer fetched here).
 // The timeout is set to (next_send_time - 10 min - now), so suspension
 // auto-resolves at the approval cutoff.
-//
-// The buttons are URL buttons, both pointing at the same resume_url
-// with different query params (?decision=approve / ?decision=reject).
-// On resume, apply_decision reads the decision and branches.
 
 import { axios } from "@pipedream/platform";
 
@@ -119,10 +113,6 @@ export default defineComponent({
       type: "app",
       app: "slack",
     },
-    braze: {
-      type: "app",
-      app: "braze",
-    },
     approval_channel: {
       type: "string",
       label: "Slack Approval Channel ID",
@@ -152,19 +142,23 @@ export default defineComponent({
       label: "Content Prep Resume Data",
       optional: true,
     },
+    aiContent: {
+      type: "any",
+      label: "AI Content from Braze Catalog",
+      optional: true,
+    },
   },
   async run({ $ }) {
     const config = this.config;
     const driveFiles = this.driveFiles || [];
     const verifyResult = this.verifyResult;
+    const aiContent = this.aiContent || {};
 
     const contentPrepResume = this.contentPrepResume || {};
     const run = {
       run_id: contentPrepResume.run_id || "unknown",
       newsletter_key: config.newsletter_key,
       braze_catalog_id: config.braze_catalog_id,
-      ai_subject: contentPrepResume.ai_subject || "",
-      ai_intro: contentPrepResume.ai_intro || "",
       next_send_time: this.nextSendTime,
     };
 
@@ -179,23 +173,8 @@ export default defineComponent({
       timeStyle: "short",
     });
 
-    // Read AI content fresh from the shared crm_newsletters_content catalog
-    // so we show exactly what the template will use at send time.
-    let aiSubject = run.ai_subject;
-    let aiIntro = run.ai_intro;
-    try {
-      const metaResp = await axios($, {
-        method: "GET",
-        url: `https://${this.braze.$auth.instance_domain}.braze.${this.braze.$auth.region}/catalogs/crm_newsletters_content/items/${run.newsletter_key}`,
-        headers: {
-          Authorization: `Bearer ${this.braze.$auth.api_key}`,
-        },
-      });
-      aiSubject = metaResp?.item?.ai_subject || aiSubject;
-      aiIntro = metaResp?.item?.ai_intro || aiIntro;
-    } catch (e) {
-      console.warn("Could not fetch from crm_newsletters_content, using callback values:", e.message);
-    }
+    const aiSubject = aiContent.ai_subject || "";
+    const aiIntro = aiContent.ai_intro || "";
 
     const channel = config.slack_channel_id || this.approval_channel;
     if (!channel) {

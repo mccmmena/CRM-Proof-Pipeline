@@ -97,19 +97,58 @@ steps:
   uses: "./filter/entry.js"
   props:
     verifyResult: "{{steps.verify_proof.$return_value}}"
-- namespace: post_and_suspend
+- namespace: fetch_ai_content
   runtime: nodejs20.x
-  uses: "./post_and_suspend/entry.js"
+  uses: "./fetch_ai_content/entry.js"
+  props:
+    newsletterKey: "{{steps.check_config.$return_value.newsletter_key}}"
+    contentPrepResume: "{{steps.suspend_for_content_prep.$resume_data?.body}}"
+- namespace: suspend_and_post_proof
+  runtime: nodejs20.x
+  uses: "./suspend_and_post_proof/entry.js"
   props:
     config: "{{steps.check_config.$return_value}}"
     driveFiles: "{{steps.upload_multiple_screenshots_to_drive.$return_value?.uploadedFiles}}"
     verifyResult: "{{steps.verify_proof.$return_value}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
     contentPrepResume: "{{steps.suspend_for_content_prep.$resume_data?.body}}"
-- namespace: apply_decision
+    aiContent: "{{steps.fetch_ai_content.$return_value}}"
+- namespace: extract_decision
   runtime: nodejs20.x
-  uses: "./apply_decision/entry.js"
+  uses: "./extract_decision/entry.js"
   props:
     config: "{{steps.check_config.$return_value}}"
-    runId: "{{steps.post_and_suspend.$return_value?.run_id}}"
+    runId: "{{steps.suspend_and_post_proof.$return_value?.run_id}}"
+    resumeData: "{{steps.suspend_and_post_proof.$resume_data}}"
+- namespace: update_run_decision
+  runtime: nodejs20.x
+  uses: snowflake-execute-sql-query@0.2.3
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
+    sql:
+      value: |-
+        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
+        SET DECISION = :1,
+            DECIDED_AT = CURRENT_TIMESTAMP(),
+            FINALIZED_AT = CURRENT_TIMESTAMP()
+        WHERE RUN_ID = :2
+          AND DECISION = 'PENDING'
+      query: |-
+        UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
+        SET DECISION = :1,
+            DECIDED_AT = CURRENT_TIMESTAMP(),
+            FINALIZED_AT = CURRENT_TIMESTAMP()
+        WHERE RUN_ID = :2
+          AND DECISION = 'PENDING'
+      params:
+      - "{{steps.extract_decision.$return_value.decision}}"
+      - "{{steps.extract_decision.$return_value.run_id}}"
+- namespace: notify_decision
+  runtime: nodejs20.x
+  uses: "./notify_decision/entry.js"
+  props:
+    decision: "{{steps.extract_decision.$return_value.decision}}"
+    channel: "{{steps.suspend_and_post_proof.$return_value?.channel}}"
+    threadTs: "{{steps.suspend_and_post_proof.$return_value?.ts}}"
 
