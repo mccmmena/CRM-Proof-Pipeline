@@ -80,6 +80,9 @@ steps:
     catalogName: "{{steps.load_config.$return_value.braze_catalog_id}}"
     sheetData: "{{steps.json_to_csv.$return_value}}"
     idField: id
+- namespace: build_prompt
+  runtime: nodejs20.x
+  uses: "./build_prompt/entry.js"
 - namespace: ghostwriter
   runtime: nodejs20.x
   uses: "./ghostwriter/entry.js"
@@ -88,11 +91,7 @@ steps:
       _enc: c26a1e7f5b4a880668f1bea535c1e53093c16328063b11e18c93b019a4429a65$$UunFCYzLfa39OVUJWCVLZW6sn5z8W/WeB8dQB96LFvq3XLMk11/0SG4WI2HilQ2Neu9MVf67dTfrxTEJy8noHRvjYlDnuUit+BRB/yZBAkE06ixjrA==--DJh7SVRjK/mushyJ--v7bw/jA3A3R9DGjPzKk7IA==
     assistant_id: 39JKVUD02DfsD3222ox6NADElOc
     version: 8
-    prompt: "Always respond in valid JSON. Do not include any text before or after
-      the JSON block.\n\nGive me Sam's take on the below stories. can you make the
-      subject line Sentence Case? \n{{JSON.stringify(steps.json_to_csv.$return_value)}}\n\nreturn
-      it as json in the format:\n{\nai_subject: string\nai_intro: string\nai_description:
-      string\n}"
+    prompt: "{{steps.build_prompt.$return_value}}"
 - namespace: parse_ghostwriter
   runtime: nodejs20.x
   uses: "./parse_ghostwriter/entry.js"
