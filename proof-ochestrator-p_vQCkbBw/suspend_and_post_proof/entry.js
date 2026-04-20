@@ -115,26 +115,19 @@ export default defineComponent({
     const parentBlocks = [
       {
         type: "header",
-        text: { type: "plain_text", text: `${run.newsletter_key} — Proof Ready` },
+        text: { type: "plain_text", text: `${config.display_name} — Proof Ready` },
       },
       {
         type: "section",
         fields: [
           { type: "mrkdwn", text: `*Sends:*\n${sendTime}` },
-          { type: "mrkdwn", text: `*Run ID:*\n\`${run.run_id}\`` },
-        ],
-      },
-      {
-        type: "context",
-        elements: [
-          { type: "mrkdwn", text: `Auto-rejects at T-${CUTOFF_MINUTES_BEFORE_SEND} min if no decision. Open thread to review & approve.` },
         ],
       },
     ];
 
     const parent = await this.postSlack($, {
       channel,
-      text: `Proof ready for ${run.newsletter_key}`,
+      text: `Proof ready for ${config.display_name}`,
       blocks: parentBlocks,
     });
 
@@ -219,12 +212,16 @@ export default defineComponent({
       text: verifyLines.join("\n\n"),
     });
 
-    // ── Reply 3: Screenshots (2 images) ─────────────────────────────────
+    // ── Reply 3: Screenshots (side-by-side via section+accessory) ──────
     if (driveFiles.length > 0) {
       const imageBlocks = driveFiles.slice(0, 2).map((f) => ({
-        type: "image",
-        image_url: `https://drive.google.com/uc?export=view&id=${f.id}`,
-        alt_text: f.client || f.name,
+        type: "section",
+        text: { type: "mrkdwn", text: `*${f.client || f.name}*` },
+        accessory: {
+          type: "image",
+          image_url: `https://drive.google.com/uc?export=view&id=${f.id}`,
+          alt_text: f.client || f.name,
+        },
       }));
 
       await this.postSlack($, {
@@ -232,7 +229,6 @@ export default defineComponent({
         thread_ts: threadTs,
         text: "Screenshots",
         blocks: imageBlocks,
-        unfurl_media: true,
       });
     }
 

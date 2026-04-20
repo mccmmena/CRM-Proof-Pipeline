@@ -17,6 +17,12 @@ export default defineComponent({
       label: "Rendered HTML",
       description: "From braze-render resume data",
     },
+    subject: {
+      type: "string",
+      label: "Email Subject",
+      description: "Rendered subject for EOA screenshots",
+      optional: true,
+    },
   },
   async run({ $ }) {
     if (!this.renderedHtml) {
@@ -25,14 +31,17 @@ export default defineComponent({
 
     const { resume_url } = $.flow.suspend(20 * 60 * 1000); // 20 min
 
+    const payload = {
+      html_body: this.renderedHtml,
+      callback_url: resume_url,
+    };
+    if (this.subject) payload.subject = this.subject;
+
     await axios($, {
       method: "POST",
       url: this.email_test_api_url,
       headers: { "Content-Type": "application/json" },
-      data: {
-        html_body: this.renderedHtml,
-        callback_url: resume_url,
-      },
+      data: payload,
     });
 
     $.export("$summary", `Suspended — waiting for email-test-api callback`);
