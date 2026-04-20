@@ -54,9 +54,22 @@ export default defineComponent({
     let body, subject, preheader;
 
     if (isCanvas) {
-      // Canvas: steps[] → find first step with an email message variant
+      // Canvas: walk the step graph from entry points so we skip disconnected steps
       const steps = response.steps || [];
+      const entryIds = (response.variants || []).flatMap(v => v.first_step_ids || []);
+      const stepMap = new Map(steps.map(s => [s.id, s]));
+      const reachable = new Set();
+      const queue = [...entryIds];
+      while (queue.length) {
+        const sid = queue.shift();
+        if (reachable.has(sid)) continue;
+        reachable.add(sid);
+        const s = stepMap.get(sid);
+        if (s) for (const nid of (s.next_step_ids || [])) queue.push(nid);
+      }
+
       for (const step of steps) {
+        if (reachable.size > 0 && !reachable.has(step.id)) continue;
         const messages = step.messages || {};
         for (const variant of Object.values(messages)) {
           if (variant.channel === "email" && variant.body) {
