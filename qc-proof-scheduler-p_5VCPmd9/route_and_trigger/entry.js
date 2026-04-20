@@ -9,6 +9,33 @@
 
 import { axios } from "@pipedream/platform";
 
+// Map Braze schedule_type to IANA timezone for offset calculation.
+const TZ_MAP = {
+  "Eastern Time (US & Canada)": "America/New_York",
+  "Central Time (US & Canada)": "America/Chicago",
+  "Mountain Time (US & Canada)": "America/Denver",
+  "Pacific Time (US & Canada)": "America/Los_Angeles",
+};
+
+// Append the correct UTC offset to a naive datetime string.
+// e.g. "2026-04-20T13:20:00" + "Eastern Time (US & Canada)" → "2026-04-20T13:20:00-04:00"
+function appendOffset(naiveDatetime, scheduleType) {
+  const tz = TZ_MAP[scheduleType];
+  if (!tz || !naiveDatetime) return naiveDatetime;
+
+  // Build a Date in the target timezone to find its UTC offset
+  const dt = new Date(naiveDatetime + "Z"); // treat as UTC temporarily
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    timeZoneName: "longOffset",
+  });
+  const parts = fmt.formatToParts(dt);
+  const offsetPart = parts.find((p) => p.type === "timeZoneName");
+  // offsetPart.value is like "GMT-04:00" or "GMT+05:30"
+  const offset = offsetPart?.value?.replace("GMT", "") || "";
+  return offset ? `${naiveDatetime}${offset}` : naiveDatetime;
+}
+
 export default defineComponent({
   props: {
     items: {
@@ -50,7 +77,7 @@ export default defineComponent({
       // Send minimal payload — the orchestrator resolves everything else from the ID
       const payload = {
         canvas_id: item.id,
-        next_send_time: item.next_send_time,
+        next_send_time: appendOffset(item.next_send_time, item.schedule_type),
       };
 
       try {
