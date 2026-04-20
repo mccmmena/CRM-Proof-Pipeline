@@ -113,6 +113,7 @@ steps:
       authProvisionId: apn_OghQ5eO
     config: "{{steps.check_config.$return_value}}"
     driveFiles: "{{steps.upload_multiple_screenshots_to_drive.$return_value?.uploadedFiles}}"
+    driveFolderId: "{{steps.upload_multiple_screenshots_to_drive.$return_value?.campaignFolder?.id}}"
     verifyResult: "{{steps.verify_proof.$return_value}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
     contentPrepResume: "{{steps.suspend_for_content_prep.$resume_data?.body}}"

@@ -44,7 +44,9 @@ function extractLinks(html) {
     seen.add(url);
     // Strip HTML tags from anchor content to get readable text
     const anchorText = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    links.push({ url, anchor: anchorText || "(image link)" });
+    // Skip links that only wrap images — the AI checks broken images visually
+    if (!anchorText) continue;
+    links.push({ url, anchor: anchorText });
   }
   return links;
 }

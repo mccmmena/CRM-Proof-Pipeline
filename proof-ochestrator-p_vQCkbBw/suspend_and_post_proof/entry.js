@@ -30,6 +30,11 @@ export default defineComponent({
       label: "Drive Uploaded Files",
       optional: true,
     },
+    driveFolderId: {
+      type: "string",
+      label: "Drive Campaign Folder ID",
+      optional: true,
+    },
     verifyResult: {
       type: "any",
       label: "Verify Proof Result",
@@ -232,44 +237,32 @@ export default defineComponent({
       text: verifyLines.join("\n\n"),
     });
 
-    // ── Reply 3: Screenshots (light + dark mode carousels) ─────────────
+    // ── Reply 3: iPhone screenshots (light + dark) + Drive folder link ──
     if (driveFiles.length > 0) {
-      const lightFiles = driveFiles.filter((f) => {
-        const id = (f.client || f.name || "").toLowerCase();
-        return !id.includes("dark") && !id.includes("_dm");
-      });
-      const darkFiles = driveFiles.filter((f) => {
-        const id = (f.client || f.name || "").toLowerCase();
-        return id.includes("dark") || id.includes("_dm");
-      });
-
-      const toCarousel = (files) => ({
-        type: "carousel",
-        elements: files.map((f) => ({
-          type: "card",
-          hero_image: {
-            type: "image",
-            image_url: `https://lh3.googleusercontent.com/d/${f.id}`,
-            alt_text: f.client || f.name,
-          },
-          title: { type: "mrkdwn", text: f.client || f.name },
-        })),
-      });
-
       const blocks = [];
-      if (lightFiles.length > 0) {
+
+      // Show iPhone light and dark as full-size images
+      const iphoneLight = driveFiles.find((f) => f.client === "iphone16_18" || (f.name || "").includes("iPhone 16 - iOS 18."));
+      const iphoneDark = driveFiles.find((f) => f.client === "iphone16_18_dm" || (f.name || "").includes("iPhone 16 - iOS 18 Dark"));
+
+      for (const f of [iphoneLight, iphoneDark].filter(Boolean)) {
         blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: ":sunny: *Light Mode*" },
+          type: "image",
+          image_url: `https://lh3.googleusercontent.com/d/${f.id}`,
+          alt_text: f.client || f.name,
+          title: { type: "plain_text", text: f.client || f.name },
         });
-        blocks.push(toCarousel(lightFiles));
       }
-      if (darkFiles.length > 0) {
+
+      // Link to Drive folder for all other clients
+      const driveFolderId = this.driveFolderId;
+      if (driveFolderId) {
         blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: ":crescent_moon: *Dark Mode*" },
+          type: "context",
+          elements: [
+            { type: "mrkdwn", text: `:file_folder: <https://drive.google.com/drive/folders/${driveFolderId}|View all ${driveFiles.length} screenshots in Drive>` },
+          ],
         });
-        blocks.push(toCarousel(darkFiles));
       }
 
       if (blocks.length > 0) {
