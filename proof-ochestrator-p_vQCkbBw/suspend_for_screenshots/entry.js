@@ -7,6 +7,14 @@ import { axios } from "@pipedream/platform";
 
 export default defineComponent({
   props: {
+    slack: {
+      type: "app",
+      app: "slack",
+    },
+    alert_channel: {
+      type: "string",
+      label: "Error Alert Channel ID",
+    },
     email_test_api_url: {
       type: "string",
       label: "Email Test API Workflow URL",
@@ -25,6 +33,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     if (!this.renderedHtml) {
       throw new Error("No rendered_html — braze-render callback may have failed");
     }
@@ -46,5 +55,24 @@ export default defineComponent({
 
     $.export("$summary", `Suspended — waiting for email-test-api callback`);
     return { rendered_html: this.renderedHtml, waiting_for: "email_test_api", cancel_url };
+   } catch (err) {
+    try {
+      await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data: {
+          channel: this.alert_channel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`suspend_for_screenshots\`\n> ${err.message}`,
+        },
+      });
+    } catch (slackErr) {
+      console.error("Slack alert failed:", slackErr.message);
+    }
+    throw err;
+   }
   },
 });

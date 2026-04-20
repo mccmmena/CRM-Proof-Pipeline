@@ -14,6 +14,9 @@ steps:
   props:
     braze:
       authProvisionId: apn_1Khpe1W
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: C093AK8TU00
     canvasId: "{{steps.trigger.event.body.canvas_id}}"
     campaignId: "{{steps.trigger.event.body.campaign_id}}"
 - namespace: check_config_query
@@ -39,6 +42,9 @@ steps:
   runtime: nodejs20.x
   uses: "./check_config/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: C093AK8TU00
     configRows: "{{steps.check_config_query.$return_value}}"
     campaignName: "{{steps.resolve_braze_details.$return_value.name}}"
 - namespace: optional_delay
@@ -50,6 +56,9 @@ steps:
   runtime: nodejs20.x
   uses: "./suspend_for_content_prep/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: "{{steps.check_config.$return_value.slack_channel_id || 'C093AK8TU00'}}"
     content_prep_url: https://eo6ad4e0u4fgvuo.m.pipedream.net
     newsletterKey: "{{steps.check_config.$return_value.newsletter_key}}"
     nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
@@ -57,6 +66,9 @@ steps:
   runtime: nodejs20.x
   uses: "./suspend_for_render/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: "{{steps.check_config.$return_value.slack_channel_id || 'C093AK8TU00'}}"
     braze_render_url: https://eov0l2spkm1h5vp.m.pipedream.net
     emailBody: "{{steps.resolve_braze_details.$return_value.email.body}}"
     emailSubject: "{{steps.resolve_braze_details.$return_value.email.subject}}"
@@ -65,6 +77,9 @@ steps:
   runtime: nodejs20.x
   uses: "./suspend_for_screenshots/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: "{{steps.check_config.$return_value.slack_channel_id || 'C093AK8TU00'}}"
     email_test_api_url: https://eoihl6hmsymk4tc.m.pipedream.net
     renderedHtml: "{{steps.suspend_for_render.$resume_data?.body?.rendered_html}}"
     subject: "{{steps.suspend_for_render.$resume_data?.body?.subject}}"
@@ -72,6 +87,9 @@ steps:
   runtime: nodejs20.x
   uses: "./extract_screenshots/entry.js"
   props:
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: "{{steps.check_config.$return_value.slack_channel_id || 'C093AK8TU00'}}"
     resumeData: "{{steps.suspend_for_screenshots.$resume_data?.body}}"
     renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
 - namespace: upload_multiple_screenshots_to_drive
@@ -89,6 +107,9 @@ steps:
   props:
     openai:
       authProvisionId: apn_QPhO4kd
+    slack:
+      authProvisionId: apn_OghQ5eO
+    alert_channel: "{{steps.check_config.$return_value.slack_channel_id || 'C093AK8TU00'}}"
     renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
     screenshots: "{{steps.extract_screenshots.$return_value?.screenshots}}"
     subject: "{{steps.extract_screenshots.$return_value?.realSubject || steps.resolve_braze_details.$return_value.name}}"
@@ -160,4 +181,3 @@ steps:
     decision: "{{steps.extract_decision.$return_value.decision}}"
     channel: "{{steps.suspend_and_post_proof.$return_value?.channel}}"
     threadTs: "{{steps.suspend_and_post_proof.$return_value?.ts}}"
-

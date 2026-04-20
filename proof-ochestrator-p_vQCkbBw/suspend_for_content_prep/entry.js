@@ -5,6 +5,14 @@ import { axios } from "@pipedream/platform";
 
 export default defineComponent({
   props: {
+    slack: {
+      type: "app",
+      app: "slack",
+    },
+    alert_channel: {
+      type: "string",
+      label: "Error Alert Channel ID",
+    },
     content_prep_url: {
       type: "string",
       label: "Newsletter Content Prep Workflow URL",
@@ -20,6 +28,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     const { resume_url, cancel_url } = $.flow.suspend(15 * 60 * 1000); // 15 min timeout
 
     await axios($, {
@@ -35,5 +44,24 @@ export default defineComponent({
 
     $.export("$summary", `Suspended — waiting for content-prep callback`);
     return { triggered: true, newsletter_key: this.newsletterKey, cancel_url };
+   } catch (err) {
+    try {
+      await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data: {
+          channel: this.alert_channel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`suspend_for_content_prep\`\n> ${err.message}`,
+        },
+      });
+    } catch (slackErr) {
+      console.error("Slack alert failed:", slackErr.message);
+    }
+    throw err;
+   }
   },
 });

@@ -79,6 +79,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     const config = this.config;
     const driveFiles = this.driveFiles || [];
     const verifyResult = this.verifyResult;
@@ -283,5 +284,19 @@ export default defineComponent({
       timeoutMs,
       cancel_url,
     };
+   } catch (err) {
+    const alertChannel = this.config?.slack_channel_id || this.approval_channel;
+    if (alertChannel) {
+      try {
+        await this.postSlack($, {
+          channel: alertChannel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`suspend_and_post_proof\`\n> ${err.message}`,
+        });
+      } catch (slackErr) {
+        console.error("Slack alert failed:", slackErr.message);
+      }
+    }
+    throw err;
+   }
   },
 });

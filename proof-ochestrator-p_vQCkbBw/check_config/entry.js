@@ -1,8 +1,18 @@
 // Process the config query result from the built-in Snowflake step.
 // This workflow is newsletter-only — missing config means a routing error.
 
+import { axios } from "@pipedream/platform";
+
 export default defineComponent({
   props: {
+    slack: {
+      type: "app",
+      app: "slack",
+    },
+    alert_channel: {
+      type: "string",
+      label: "Error Alert Channel ID",
+    },
     configRows: {
       type: "any",
       label: "Config Query Rows",
@@ -13,6 +23,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     if (!this.campaignName) {
       throw new Error("No campaign name in trigger body — cannot look up newsletter config");
     }
@@ -32,5 +43,24 @@ export default defineComponent({
       braze_catalog_id: row.BRAZE_CATALOG_ID,
       slack_channel_id: row.SLACK_CHANNEL_ID,
     };
+   } catch (err) {
+    try {
+      await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data: {
+          channel: this.alert_channel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`check_config\`\n> ${err.message}`,
+        },
+      });
+    } catch (slackErr) {
+      console.error("Slack alert failed:", slackErr.message);
+    }
+    throw err;
+   }
   },
 });

@@ -179,6 +179,14 @@ export default defineComponent({
       type: "app",
       app: "openai",
     },
+    slack: {
+      type: "app",
+      app: "slack",
+    },
+    alert_channel: {
+      type: "string",
+      label: "Error Alert Channel ID",
+    },
     renderedHtml: {
       type: "string",
       label: "Rendered HTML",
@@ -196,6 +204,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     const rendered_html = this.renderedHtml;
     const screenshots = this.screenshots || [];
     const subject = this.subject || "";
@@ -272,5 +281,24 @@ export default defineComponent({
       },
       screenshots_analyzed: selectedScreenshots.map((s) => s.client),
     };
+   } catch (err) {
+    try {
+      await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data: {
+          channel: this.alert_channel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`verify_proof\`\n> ${err.message}`,
+        },
+      });
+    } catch (slackErr) {
+      console.error("Slack alert failed:", slackErr.message);
+    }
+    throw err;
+   }
   },
 });

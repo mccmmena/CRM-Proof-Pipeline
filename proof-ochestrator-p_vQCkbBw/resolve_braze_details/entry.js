@@ -10,6 +10,14 @@ export default defineComponent({
       type: "app",
       app: "braze",
     },
+    slack: {
+      type: "app",
+      app: "slack",
+    },
+    alert_channel: {
+      type: "string",
+      label: "Error Alert Channel ID",
+    },
     canvasId: {
       type: "string",
       label: "Canvas ID",
@@ -22,6 +30,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     const id = this.canvasId || this.campaignId;
     if (!id) {
       throw new Error("Either canvas_id or campaign_id is required");
@@ -110,5 +119,24 @@ export default defineComponent({
 
     $.export("$summary", `Resolved ${isCanvas ? "canvas" : "campaign"} "${name}"`);
     return { name, email: { body, subject, preheader } };
+   } catch (err) {
+    try {
+      await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data: {
+          channel: this.alert_channel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`resolve_braze_details\`\n> ${err.message}`,
+        },
+      });
+    } catch (slackErr) {
+      console.error("Slack alert failed:", slackErr.message);
+    }
+    throw err;
+   }
   },
 });

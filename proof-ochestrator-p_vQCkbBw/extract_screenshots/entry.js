@@ -2,6 +2,8 @@
 // Filters to a curated set of clients and adds friendly names for Drive upload.
 // Extracts the real email subject from the rendered HTML <title> tag.
 
+import { axios } from "@pipedream/platform";
+
 const PREFERRED_CLIENTS = [
   { id: "iphone16_18", name: "iPhone 16 - iOS 18" },
   { id: "iphone16_18_dm", name: "iPhone 16 - iOS 18 Dark" },
@@ -23,6 +25,14 @@ function extractTitle(html) {
 
 export default defineComponent({
   props: {
+    slack: {
+      type: "app",
+      app: "slack",
+    },
+    alert_channel: {
+      type: "string",
+      label: "Error Alert Channel ID",
+    },
     resumeData: {
       type: "any",
       label: "Email Test API Resume Data",
@@ -34,6 +44,7 @@ export default defineComponent({
     },
   },
   async run({ $ }) {
+   try {
     const resumeBody = this.resumeData;
 
     if (!resumeBody || resumeBody.status !== "complete") {
@@ -69,5 +80,24 @@ export default defineComponent({
       full_results: resumeBody.full_results || null,
       realSubject,
     };
+   } catch (err) {
+    try {
+      await axios($, {
+        method: "POST",
+        url: "https://slack.com/api/chat.postMessage",
+        headers: {
+          Authorization: `Bearer ${this.slack.$auth.oauth_access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        data: {
+          channel: this.alert_channel,
+          text: `:rotating_light: *Proof Orchestrator* failed in \`extract_screenshots\`\n> ${err.message}`,
+        },
+      });
+    } catch (slackErr) {
+      console.error("Slack alert failed:", slackErr.message);
+    }
+    throw err;
+   }
   },
 });
