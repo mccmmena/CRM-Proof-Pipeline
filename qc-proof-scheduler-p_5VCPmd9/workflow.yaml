@@ -22,15 +22,32 @@ steps:
     targetTags:
     - Proof
 - namespace: code
+  disabled: true
   runtime: nodejs20.x
   uses: "./code/entry.js"
   props:
     items: "{{steps.utils_filter_by_tags.$return_value}}"
     workflowUrl: https://eone5ahulwjwhb6.m.pipedream.net
+- namespace: load_newsletter_routes
+  runtime: nodejs20.x
+  uses: snowflake-execute-sql-query@0.2.3
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
+    sql:
+      value: |-
+        SELECT NEWSLETTER_KEY, PROOF_WORKFLOW_URL
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
+        WHERE ENABLED = TRUE AND PROOF_WORKFLOW_URL IS NOT NULL
+      query: |-
+        SELECT NEWSLETTER_KEY, PROOF_WORKFLOW_URL
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
+        WHERE ENABLED = TRUE AND PROOF_WORKFLOW_URL IS NOT NULL
 - namespace: route_and_trigger
-  disabled: true
   runtime: nodejs20.x
   uses: "./route_and_trigger/entry.js"
+  props:
+    items: "{{steps.utils_filter_by_tags.$return_value}}"
 - namespace: create_folder
   disabled: true
   runtime: nodejs20.x

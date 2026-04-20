@@ -1,6 +1,5 @@
-// If newsletter config exists, suspend and POST to content-prep.
+// Suspend and POST to content-prep.
 // Content-prep will POST results to resume_url when done.
-// If no config (non-newsletter), skip immediately.
 
 import { axios } from "@pipedream/platform";
 
@@ -15,11 +14,6 @@ export default defineComponent({
   async run({ steps, $ }) {
     const config = steps.check_config.$return_value;
     const body = steps.trigger.event.body;
-
-    if (!config) {
-      $.export("$summary", "No newsletter config — skipping content-prep");
-      return { triggered: false, reason: "no_config" };
-    }
 
     const { resume_url } = $.flow.suspend(15 * 60 * 1000); // 15 min timeout
 

@@ -1,5 +1,5 @@
 // Process the config query result from the built-in Snowflake step.
-// Returns the config row if found, or null if not a newsletter.
+// This workflow is newsletter-only — missing config means a routing error.
 
 export default defineComponent({
   async run({ steps, $ }) {
@@ -7,17 +7,14 @@ export default defineComponent({
     const campaignName = body.name || body.campaign_name || body.canvas_name;
 
     if (!campaignName) {
-      $.export("$summary", "No campaign name in trigger body — skipping config lookup");
-      return null;
+      throw new Error("No campaign name in trigger body — cannot look up newsletter config");
     }
 
     const rows = steps.check_config_query.$return_value || [];
     if (rows.length === 0) {
-      console.warn(
-        `No enabled NEWSLETTER_CONFIG row for "${campaignName}" — content-prep will be skipped`
+      throw new Error(
+        `No enabled NEWSLETTER_CONFIG row for "${campaignName}" — this workflow requires newsletter config`
       );
-      $.export("$summary", `No config for "${campaignName}" — proof-only`);
-      return null;
     }
 
     const row = rows[0];

@@ -44,17 +44,6 @@ export default defineComponent({
     const config = steps.check_config?.$return_value;
     const suspendResult = steps.post_and_suspend?.$return_value;
 
-    // If no config or we never actually suspended (dry run / non-newsletter),
-    // there's nothing to do.
-    if (!config) {
-      $.export("$summary", "No newsletter config — skipping");
-      return { skipped: true, reason: "no_config" };
-    }
-    if (suspendResult?.dry_run) {
-      $.export("$summary", "Dry run — not applying decision");
-      return { skipped: true, reason: "dry_run" };
-    }
-
     // Dump context for debugging until we know the exact shape
     console.log(
       "Resume context:",

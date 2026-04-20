@@ -1,26 +1,16 @@
 // Post the proof message to Slack and suspend the workflow waiting for an
 // approval decision.
 //
-// Two modes:
-//   1. Newsletter run found (from lookup_newsletter_run): reads AI content
-//      from the Braze catalog meta row, builds a Block Kit message with
-//      AI preview + screenshot links + two URL buttons (approve/reject),
-//      posts to Slack, then calls $.flow.suspend(timeoutMs) to pause the
-//      workflow until a button is clicked OR the timeout fires. The timeout
-//      is set to (next_send_time - 10 min - now), so suspension auto-resolves
-//      at the approval cutoff.
+// Reads AI content from the Braze catalog meta row, builds a Block Kit
+// message with AI preview + screenshot links + two URL buttons
+// (approve/reject), posts to Slack, then calls $.flow.suspend(timeoutMs)
+// to pause the workflow until a button is clicked OR the timeout fires.
+// The timeout is set to (next_send_time - 10 min - now), so suspension
+// auto-resolves at the approval cutoff.
 //
-//      The buttons are URL buttons, both pointing at the same resume_url
-//      with different query params:
-//        ${resume_url}?decision=approve
-//        ${resume_url}?decision=reject
-//      On resume, apply_decision reads the decision and branches.
-//
-//   2. No newsletter run: posts a plain message (existing behavior) and
-//      returns without suspending. Workflow continues/ends normally.
-//
-// Dry run default: true. When true, the Slack post is skipped entirely and
-// the step returns the payload it would have posted, without suspending.
+// The buttons are URL buttons, both pointing at the same resume_url
+// with different query params (?decision=approve / ?decision=reject).
+// On resume, apply_decision reads the decision and branches.
 
 import { axios } from "@pipedream/platform";
 
@@ -136,31 +126,16 @@ export default defineComponent({
     approval_channel: {
       type: "string",
       label: "Slack Approval Channel ID",
-      description: "Channel ID (e.g. C0123456789) where the approval message is posted",
+      description: "Fallback channel ID if not set in NEWSLETTER_CONFIG",
       optional: true,
-    },
-    dry_run: {
-      type: "boolean",
-      label: "Dry Run (don't post to Slack and don't suspend)",
-      default: true,
     },
   },
   async run({ steps, $ }) {
     const config = steps.check_config?.$return_value;
-    const contentPrep = steps.suspend_for_content_prep?.$return_value;
     const body = steps.trigger.event.body;
     const driveFiles =
       steps.upload_multiple_screenshots_to_drive?.$return_value?.uploadedFiles || [];
     const verifyResult = steps.verify_proof?.$return_value;
-
-    // Non-newsletter proof → skip
-    if (!config || !contentPrep?.triggered) {
-      $.export(
-        "$summary",
-        "No newsletter config — skipping Block Kit post (non-newsletter proof)"
-      );
-      return { posted: false, reason: "no_newsletter_run" };
-    }
 
     // Build a run object from check_config + content-prep resume data
     // Content-prep resume body: { status, run_id, newsletter_key, ai_subject, ai_intro }
@@ -204,22 +179,8 @@ export default defineComponent({
     }
 
     const channel = config.slack_channel_id || this.approval_channel;
-    if (this.dry_run || !channel) {
-      const blocks = buildBlocks({
-        run,
-        aiSubject,
-        aiIntro,
-        sendTime,
-        driveFiles,
-        approveUrl: "https://example.invalid/approve",
-        rejectUrl: "https://example.invalid/reject",
-        verifyResult,
-      });
-      $.export(
-        "$summary",
-        `DRY RUN — would post ${blocks.length} blocks and suspend for ${Math.round(timeoutMs / 60000)} min`
-      );
-      return { posted: false, dry_run: true, run_id: run.run_id, timeoutMs, blocks };
+    if (!channel) {
+      throw new Error("No Slack channel — set SLACK_CHANNEL_ID in NEWSLETTER_CONFIG or the approval_channel prop");
     }
 
     // Suspend the workflow. Pipedream returns resume_url + cancel_url.

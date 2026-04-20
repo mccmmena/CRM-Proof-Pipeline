@@ -1,104 +1,78 @@
-// For each filtered Braze scheduled item, route to the correct downstream
-// workflow(s):
-//   1. If the item's name matches a row in NEWSLETTER_CONFIG, POST to the
-//      newsletter-content-prep workflow (with newsletter_key + next_send_time).
-//   2. Always POST to the proof pipeline (existing behavior).
+// For each filtered Braze scheduled item, route to the correct proof
+// orchestrator workflow using PROOF_WORKFLOW_URL from NEWSLETTER_CONFIG.
 //
-// Reads: steps.utils_filter_by_tags.$return_value (filtered items array)
-// Props: content_prep_url, proof_pipeline_url, snowflake
+// Reads: steps.load_newsletter_routes.$return_value (Snowflake query result)
+//        steps.utils_filter_by_tags.$return_value (filtered items array)
 //
-// The per-item behavior is fire-and-forget; content-prep and proof pipeline
-// handle their own delays internally.
+// Items whose name matches a NEWSLETTER_KEY are POSTed to their configured
+// workflow URL. Items without a match are skipped (not newsletters).
 
 import { axios } from "@pipedream/platform";
 
 export default defineComponent({
   props: {
-    snowflake: {
-      type: "app",
-      app: "snowflake",
-    },
-    content_prep_url: {
-      type: "string",
-      label: "Newsletter Content Prep URL",
-      description: "HTTP trigger URL for newsletter-content-prep workflow",
-    },
-    proof_pipeline_url: {
-      type: "string",
-      label: "Proof Pipeline URL",
-      description: "HTTP trigger URL for qc-proof-pipeline workflow",
+    items: {
+      type: "any",
+      label: "Items",
+      description: "The list of Braze scheduled items to route.",
     },
   },
   async run({ steps, $ }) {
-    const items = steps.utils_filter_by_tags?.$return_value;
-    if (!Array.isArray(items)) {
-      throw new Error("Expected steps.utils_filter_by_tags.$return_value to be an array");
+    if (!Array.isArray(this.items)) {
+      throw new Error("The 'Items' prop must be an array.");
     }
 
-    // Load all enabled newsletter keys once up front
-    const configResult = await this.snowflake.executeQuery({
-      sqlText: `
-        SELECT NEWSLETTER_KEY
-        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
-        WHERE ENABLED = TRUE
-      `,
-    });
-    const newsletterKeys = new Set(
-      (configResult?.rows || []).map((r) => r.NEWSLETTER_KEY)
+    // Build a map of newsletter_key → workflow URL from the built-in Snowflake step
+    const routes = steps.load_newsletter_routes?.$return_value || [];
+    const routeMap = new Map(
+      routes.map((r) => [r.NEWSLETTER_KEY, r.PROOF_WORKFLOW_URL])
     );
 
-    let proofSuccess = 0;
-    let proofFail = 0;
-    let prepTriggered = 0;
-    let prepFail = 0;
+    if (routeMap.size === 0) {
+      $.export("$summary", "No enabled newsletters with workflow URLs — nothing to route");
+      return { total: this.items.length, triggered: 0, skipped: this.items.length, failed: 0 };
+    }
 
-    for (const item of items) {
+    let triggered = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const item of this.items) {
       const key = item.name || item.campaign_name || item.canvas_name;
-      const nextSendTime = item.next_send_time;
+      const workflowUrl = key && routeMap.get(key);
 
-      // Route 1: newsletter content prep (if configured)
-      if (key && newsletterKeys.has(key)) {
-        try {
-          await axios($, {
-            method: "POST",
-            url: this.content_prep_url,
-            data: {
-              newsletter_key: key,
-              next_send_time: nextSendTime,
-            },
-          });
-          prepTriggered++;
-        } catch (e) {
-          console.error(`content-prep trigger failed for ${key}:`, e.message);
-          prepFail++;
-        }
+      if (!workflowUrl) {
+        console.log(`Skipping "${key || "(no name)"}" — not in NEWSLETTER_CONFIG`);
+        skipped++;
+        continue;
       }
 
-      // Route 2: proof pipeline (always, existing behavior)
+      // Compute delay: minutes until 1 hour before send time
+      let delay_minutes = 0;
+      if (item.next_send_time) {
+        const sendMs = new Date(item.next_send_time).getTime();
+        const oneHourBeforeMs = sendMs - 60 * 60 * 1000;
+        delay_minutes = Math.max(0, Math.round((oneHourBeforeMs - Date.now()) / 60000));
+      }
+
       try {
         await axios($, {
           method: "POST",
-          url: this.proof_pipeline_url,
-          data: item,
+          url: workflowUrl,
+          data: { ...item, delay_minutes },
         });
-        proofSuccess++;
-      } catch (e) {
-        console.error(`proof pipeline trigger failed:`, e.message);
-        proofFail++;
+        triggered++;
+      } catch (error) {
+        console.error(`Failed to trigger workflow for "${key}":`, error.message);
+        failed++;
       }
     }
 
     $.export(
       "$summary",
-      `Proof: ${proofSuccess}/${items.length} ok. Content-prep: ${prepTriggered} triggered${prepFail ? `, ${prepFail} failed` : ""}.`
+      `Triggered ${triggered} newsletter(s), skipped ${skipped}, failed ${failed} (of ${this.items.length} total)`
     );
 
-    return {
-      total: items.length,
-      proof_success: proofSuccess,
-      proof_fail: proofFail,
-      prep_triggered: prepTriggered,
-      prep_fail: prepFail,
-    };
+    return { total: this.items.length, triggered, skipped, failed };
   },
 });

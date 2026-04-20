@@ -20,10 +20,11 @@ Each workflow directory contains:
 
 Steps access prior step outputs via `steps.previous_step.$return_value`. Steps export data via `$.export("key", value)` or `return value`.
 
-## Architecture (the two paths)
+## Architecture
 
-1. **Classic proof path:** `qc-proof-scheduler` → `proof-orchestrator` → `qc-proof-pipeline` (delay → test send → EOA screenshots → Drive upload → Slack post)
-2. **Newsletter path:** Same as above, but orchestrator also triggers `newsletter-content-prep` first (fetch feed → Braze catalog upsert → OpenAI subject/intro → Snowflake history), then `qc-proof-pipeline` adds approval via `$.flow.suspend()`
+The orchestrator is newsletter-only. The scheduler uses `PROOF_WORKFLOW_URL` from `NEWSLETTER_CONFIG` to route each newsletter to its designated orchestrator.
+
+**Newsletter proof path:** `qc-proof-scheduler` (loads routes from Snowflake) → `proof-orchestrator` (newsletter-only: content-prep → Braze render → EOA screenshots → Drive upload → AI verification → Slack approval via `$.flow.suspend()`)
 
 ## Pipedream-specific patterns
 
@@ -37,7 +38,7 @@ Steps access prior step outputs via `steps.previous_step.$return_value`. Steps e
 ## Snowflake
 
 Tables live in `MCC_RAW.MARKETING_DEV`. DDL is at `newsletter-content-prep-p_zAC1lWL/sql/schema.sql`.
-- `NEWSLETTER_CONFIG` — per-newsletter settings keyed by `NEWSLETTER_KEY` (must exactly match the Braze campaign/canvas name — never derive from filenames)
+- `NEWSLETTER_CONFIG` — per-newsletter settings keyed by `NEWSLETTER_KEY` (must exactly match the Braze campaign/canvas name — never derive from filenames). Includes `PROOF_WORKFLOW_URL` for DB-driven routing from the scheduler.
 - `NEWSLETTER_RUNS` — one row per send, tracks stories, AI content, and approval decision
 - Run IDs use Snowflake's `UUID_STRING()`, not JS crypto
 
