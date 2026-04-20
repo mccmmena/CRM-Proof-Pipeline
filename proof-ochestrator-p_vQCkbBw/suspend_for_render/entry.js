@@ -13,10 +13,17 @@ export default defineComponent({
       label: "Braze Render Workflow URL",
       description: "HTTP trigger URL for braze-render workflow",
     },
+    emailBody: {
+      type: "string",
+      label: "Email Body (Liquid)",
+    },
+    emailSubject: {
+      type: "string",
+      label: "Email Subject",
+    },
   },
-  async run({ steps, $ }) {
-    const email = steps.utils_rebuild_braze_message.$return_value?.email;
-    if (!email?.body) {
+  async run({ $ }) {
+    if (!this.emailBody) {
       throw new Error("No email body from utils_rebuild_braze_message");
     }
 
@@ -27,13 +34,13 @@ export default defineComponent({
       url: this.braze_render_url,
       headers: { "Content-Type": "application/json" },
       data: {
-        liquid: email.body,
-        subject: email.subject,
+        liquid: this.emailBody,
+        subject: this.emailSubject,
         callback_url: resume_url,
       },
     });
 
     $.export("$summary", `Suspended — waiting for braze-render callback`);
-    return { subject: email.subject, waiting_for: "braze_render" };
+    return { subject: this.emailSubject, waiting_for: "braze_render" };
   },
 });

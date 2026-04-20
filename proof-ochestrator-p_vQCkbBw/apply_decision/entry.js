@@ -39,10 +39,19 @@ export default defineComponent({
       type: "app",
       app: "braze",
     },
+    config: {
+      type: "any",
+      label: "Newsletter Config",
+    },
+    runId: {
+      type: "string",
+      label: "Run ID",
+      optional: true,
+    },
   },
   async run({ steps, $ }) {
-    const config = steps.check_config?.$return_value;
-    const suspendResult = steps.post_and_suspend?.$return_value;
+    const config = this.config;
+    const runId = this.runId || "unknown";
 
     // Dump context for debugging until we know the exact shape
     console.log(
@@ -61,9 +70,8 @@ export default defineComponent({
 
     console.log(`Resolved decision: ${decision || "(none)"} → ${finalStatus}`);
 
-    // Build run info from check_config + post_and_suspend
     const run = {
-      run_id: suspendResult?.run_id || "unknown",
+      run_id: runId,
       newsletter_key: config.newsletter_key,
     };
 

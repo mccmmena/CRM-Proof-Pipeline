@@ -6,7 +6,6 @@
 //      along with link results and plaintext for a holistic QC verdict
 //
 // Returns: { needs_review, issues, summary, link_results, screenshots_analyzed }
-// If needs_review is true, the workflow continues to Slack notification.
 
 import { axios } from "@pipedream/platform";
 
@@ -116,7 +115,6 @@ function selectScreenshots(allScreenshots, preferredClients) {
     );
     if (match) selected.push(match);
   }
-  // If we didn't find enough preferred clients, fill with others up to 4
   if (selected.length < 3) {
     for (const s of allScreenshots) {
       if (!selected.includes(s) && selected.length < 4) {
@@ -130,7 +128,6 @@ function selectScreenshots(allScreenshots, preferredClients) {
 function buildUserContent({ plaintext, subject, linkResults, screenshots }) {
   const parts = [];
 
-  // Text context
   let textBlock = `**Subject line:** ${subject || "(none)"}\n\n**Plaintext content:**\n${plaintext.slice(0, 3000)}`;
 
   if (linkResults.failures.length > 0) {
@@ -144,7 +141,6 @@ function buildUserContent({ plaintext, subject, linkResults, screenshots }) {
 
   parts.push({ type: "text", text: textBlock });
 
-  // Screenshot images
   for (const s of screenshots) {
     parts.push({
       type: "image_url",
@@ -164,16 +160,26 @@ export default defineComponent({
       type: "app",
       app: "openai",
     },
+    renderedHtml: {
+      type: "string",
+      label: "Rendered HTML",
+      optional: true,
+    },
+    screenshots: {
+      type: "any",
+      label: "Screenshots",
+      optional: true,
+    },
+    subject: {
+      type: "string",
+      label: "Subject",
+      optional: true,
+    },
   },
-  async run({ steps, $ }) {
-    const rendered_html =
-      steps.suspend_for_screenshots?.$return_value?.rendered_html;
-    const screenshots =
-      steps.extract_screenshots?.$return_value?.screenshots || [];
-    const subject =
-      steps.suspend_for_screenshots?.$return_value?.subject ||
-      steps.trigger.event.body?.name ||
-      "";
+  async run({ $ }) {
+    const rendered_html = this.renderedHtml;
+    const screenshots = this.screenshots || [];
+    const subject = this.subject || "";
 
     if (!rendered_html) {
       console.warn("No rendered HTML available — skipping verification");
@@ -192,7 +198,6 @@ export default defineComponent({
     const selectedScreenshots = selectScreenshots(screenshots, DEFAULT_CLIENTS);
 
     if (selectedScreenshots.length === 0) {
-      // No screenshots — still do text/link analysis via OpenAI
       console.warn("No screenshots available for visual analysis");
     }
 

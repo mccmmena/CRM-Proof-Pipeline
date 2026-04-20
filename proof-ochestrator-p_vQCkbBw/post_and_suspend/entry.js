@@ -129,13 +129,29 @@ export default defineComponent({
       description: "Fallback channel ID if not set in NEWSLETTER_CONFIG",
       optional: true,
     },
+    config: {
+      type: "any",
+      label: "Newsletter Config",
+    },
+    driveFiles: {
+      type: "any",
+      label: "Drive Uploaded Files",
+      optional: true,
+    },
+    verifyResult: {
+      type: "any",
+      label: "Verify Proof Result",
+      optional: true,
+    },
+    nextSendTime: {
+      type: "string",
+      label: "Next Send Time",
+    },
   },
-  async run({ steps, $ }) {
-    const config = steps.check_config?.$return_value;
-    const body = steps.trigger.event.body;
-    const driveFiles =
-      steps.upload_multiple_screenshots_to_drive?.$return_value?.uploadedFiles || [];
-    const verifyResult = steps.verify_proof?.$return_value;
+  async run({ $ }) {
+    const config = this.config;
+    const driveFiles = this.driveFiles || [];
+    const verifyResult = this.verifyResult;
 
     // Build a run object from check_config + content-prep resume data
     // Content-prep resume body: { status, run_id, newsletter_key, ai_subject, ai_intro }
@@ -146,15 +162,15 @@ export default defineComponent({
       braze_catalog_id: config.braze_catalog_id,
       ai_subject: contentPrepResume.ai_subject || "",
       ai_intro: contentPrepResume.ai_intro || "",
-      next_send_time: body.next_send_time,
+      next_send_time: this.nextSendTime,
     };
 
     // Compute suspend timeout = (next_send_time - CUTOFF - now), in ms
-    const sendTs = new Date(body.next_send_time).getTime();
+    const sendTs = new Date(this.nextSendTime).getTime();
     const cutoffMs = sendTs - CUTOFF_MINUTES_BEFORE_SEND * 60 * 1000 - Date.now();
     const timeoutMs = Math.max(cutoffMs, 60 * 1000); // minimum 1 min
 
-    const sendTime = new Date(body.next_send_time).toLocaleString("en-US", {
+    const sendTime = new Date(this.nextSendTime).toLocaleString("en-US", {
       timeZone: "America/New_York",
       dateStyle: "medium",
       timeStyle: "short",

@@ -31,14 +31,21 @@ steps:
 - namespace: check_config
   runtime: nodejs20.x
   uses: "./check_config/entry.js"
+  props:
+    configRows: "{{steps.check_config_query.$return_value}}"
+    campaignName: "{{steps.trigger.event.body.name || steps.trigger.event.body.campaign_name || steps.trigger.event.body.canvas_name}}"
 - namespace: optional_delay
   runtime: nodejs20.x
   uses: "./optional_delay/entry.js"
+  props:
+    delayMinutes: "{{steps.trigger.event.body.delay_minutes || 0}}"
 - namespace: suspend_for_content_prep
   runtime: nodejs20.x
   uses: "./suspend_for_content_prep/entry.js"
   props:
     content_prep_url: https://eo6ad4e0u4fgvuo.m.pipedream.net
+    newsletterKey: "{{steps.check_config.$return_value.newsletter_key}}"
+    nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
 - namespace: utils_rebuild_braze_message
   runtime: nodejs20.x
   uses: "@mcclatchy/utils-rebuild-braze-message@0.0.7"
@@ -53,6 +60,8 @@ steps:
   uses: "./suspend_for_render/entry.js"
   props:
     braze_render_url: https://eov0l2spkm1h5vp.m.pipedream.net
+    emailBody: "{{steps.utils_rebuild_braze_message.$return_value?.email?.body}}"
+    emailSubject: "{{steps.utils_rebuild_braze_message.$return_value?.email?.subject}}"
 - namespace: suspend_for_screenshots
   runtime: nodejs20.x
   uses: "./suspend_for_screenshots/entry.js"
@@ -76,13 +85,26 @@ steps:
   props:
     openai:
       authProvisionId: apn_QPhO4kd
+    renderedHtml: "{{steps.suspend_for_screenshots.$return_value?.rendered_html}}"
+    screenshots: "{{steps.extract_screenshots.$return_value?.screenshots}}"
+    subject: "{{steps.suspend_for_screenshots.$return_value?.subject || steps.trigger.event.body.name}}"
 - namespace: filter
   runtime: nodejs20.x
   uses: "./filter/entry.js"
+  props:
+    verifyResult: "{{steps.verify_proof.$return_value}}"
 - namespace: post_and_suspend
   runtime: nodejs20.x
   uses: "./post_and_suspend/entry.js"
+  props:
+    config: "{{steps.check_config.$return_value}}"
+    driveFiles: "{{steps.upload_multiple_screenshots_to_drive.$return_value?.uploadedFiles}}"
+    verifyResult: "{{steps.verify_proof.$return_value}}"
+    nextSendTime: "{{steps.trigger.event.body.next_send_time}}"
 - namespace: apply_decision
   runtime: nodejs20.x
   uses: "./apply_decision/entry.js"
+  props:
+    config: "{{steps.check_config.$return_value}}"
+    runId: "{{steps.post_and_suspend.$return_value?.run_id}}"
 

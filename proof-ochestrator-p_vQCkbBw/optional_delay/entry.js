@@ -1,22 +1,25 @@
-// Conditionally delay the workflow. If the trigger body includes
-// delay_minutes (> 0), delay for that many minutes. Otherwise skip.
-//
-// The scheduler can compute the delay before sending, or pass 0
-// for immediate execution (e.g. manual/test triggers).
+// Conditionally delay the workflow. If delayMinutes > 0, delay for that
+// many minutes. Otherwise skip.
 
 export default defineComponent({
-  async run({ steps, $ }) {
-    const delayMinutes = Number(steps.trigger.event.body?.delay_minutes) || 0;
+  props: {
+    delayMinutes: {
+      type: "integer",
+      label: "Delay Minutes",
+      default: 0,
+    },
+  },
+  async run({ $ }) {
+    const minutes = Number(this.delayMinutes) || 0;
 
-    if (delayMinutes <= 0) {
+    if (minutes <= 0) {
       $.export("$summary", "No delay — proceeding immediately");
       return { delayed: false, minutes: 0 };
     }
 
-    const delayMs = delayMinutes * 60 * 1000;
-    $.flow.delay(delayMs);
+    $.flow.delay(minutes * 60 * 1000);
 
-    $.export("$summary", `Delaying ${delayMinutes} minutes`);
-    return { delayed: true, minutes: delayMinutes };
+    $.export("$summary", `Delaying ${minutes} minutes`);
+    return { delayed: true, minutes };
   },
 });

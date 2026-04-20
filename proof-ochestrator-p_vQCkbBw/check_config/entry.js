@@ -2,18 +2,25 @@
 // This workflow is newsletter-only — missing config means a routing error.
 
 export default defineComponent({
-  async run({ steps, $ }) {
-    const body = steps.trigger.event.body;
-    const campaignName = body.name || body.campaign_name || body.canvas_name;
-
-    if (!campaignName) {
+  props: {
+    configRows: {
+      type: "any",
+      label: "Config Query Rows",
+    },
+    campaignName: {
+      type: "string",
+      label: "Campaign Name",
+    },
+  },
+  async run({ $ }) {
+    if (!this.campaignName) {
       throw new Error("No campaign name in trigger body — cannot look up newsletter config");
     }
 
-    const rows = steps.check_config_query.$return_value || [];
+    const rows = this.configRows || [];
     if (rows.length === 0) {
       throw new Error(
-        `No enabled NEWSLETTER_CONFIG row for "${campaignName}" — this workflow requires newsletter config`
+        `No enabled NEWSLETTER_CONFIG row for "${this.campaignName}" — this workflow requires newsletter config`
       );
     }
 

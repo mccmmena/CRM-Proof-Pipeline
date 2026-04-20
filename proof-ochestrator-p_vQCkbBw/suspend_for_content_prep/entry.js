@@ -10,11 +10,16 @@ export default defineComponent({
       label: "Newsletter Content Prep Workflow URL",
       description: "HTTP trigger URL for newsletter-content-prep workflow",
     },
+    newsletterKey: {
+      type: "string",
+      label: "Newsletter Key",
+    },
+    nextSendTime: {
+      type: "string",
+      label: "Next Send Time",
+    },
   },
-  async run({ steps, $ }) {
-    const config = steps.check_config.$return_value;
-    const body = steps.trigger.event.body;
-
+  async run({ $ }) {
     const { resume_url } = $.flow.suspend(15 * 60 * 1000); // 15 min timeout
 
     await axios($, {
@@ -22,13 +27,13 @@ export default defineComponent({
       url: this.content_prep_url,
       headers: { "Content-Type": "application/json" },
       data: {
-        newsletter_key: config.newsletter_key,
-        next_send_time: body.next_send_time,
+        newsletter_key: this.newsletterKey,
+        next_send_time: this.nextSendTime,
         callback_url: resume_url,
       },
     });
 
     $.export("$summary", `Suspended — waiting for content-prep callback`);
-    return { triggered: true, newsletter_key: config.newsletter_key };
+    return { triggered: true, newsletter_key: this.newsletterKey };
   },
 });
