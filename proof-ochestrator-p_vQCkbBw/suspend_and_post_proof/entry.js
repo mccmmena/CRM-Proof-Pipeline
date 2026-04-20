@@ -117,9 +117,15 @@ export default defineComponent({
     const rejectUrl = `${resume_url}?decision=reject`;
 
     // ── Parent message (channel) ────────────────────────────────────────
+    const hasHighIssues = verifyResult?.issues?.some((i) => i.severity === "high");
+    const hasMediumIssues = verifyResult?.issues?.some((i) => i.severity === "medium");
+    const hasLinkFailures = verifyResult?.link_results?.failures?.length > 0;
+    const statusEmoji = hasHighIssues ? ":red_circle:" :
+      (hasMediumIssues || hasLinkFailures) ? ":warning:" : ":large_green_circle:";
+
     const parent = await this.postSlack($, {
       channel,
-      text: `Proof for *${config.display_name}*\nSends at ${sendTime}`,
+      text: `${statusEmoji} Proof for *${config.display_name}*\nSends at ${sendTime}`,
     });
 
     const threadTs = parent.ts;
