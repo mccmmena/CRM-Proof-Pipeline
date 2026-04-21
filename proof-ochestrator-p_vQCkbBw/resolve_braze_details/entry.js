@@ -63,10 +63,18 @@ export default defineComponent({
     let body, subject, preheader;
 
     if (isCanvas) {
-      // Canvas: walk the step graph from entry points so we skip disconnected steps
-      const steps = response.steps || [];
-      const entryIds = (response.variants || []).flatMap(v => v.first_step_ids || []);
-      const stepMap = new Map(steps.map(s => [s.id, s]));
+      // Canvas: walk the step graph from entry points so we skip disconnected steps.
+      // Handles both Standard (next_step_ids) and Flow (next_paths) canvas formats,
+      // and both step.id and step.component_id identifiers.
+      const steps = response.steps || response.components || [];
+      const stepMap = new Map(steps.map(s => [s.id || s.component_id, s]));
+
+      // Collect entry points from variants (handle multiple naming conventions)
+      const entryIds = (response.variants || []).flatMap(v =>
+        v.first_step_ids || v.first_component_ids || [v.first_step_id].filter(Boolean)
+      );
+
+      // BFS to find all reachable steps
       const reachable = new Set();
       const queue = [...entryIds];
       while (queue.length) {
@@ -74,11 +82,18 @@ export default defineComponent({
         if (reachable.has(sid)) continue;
         reachable.add(sid);
         const s = stepMap.get(sid);
-        if (s) for (const nid of (s.next_step_ids || [])) queue.push(nid);
+        if (!s) continue;
+        // Standard canvas: next_step_ids; Flow canvas: next_paths
+        const nextIds = [
+          ...(s.next_step_ids || []),
+          ...(s.next_paths || []).map(p => p.next_step_id).filter(Boolean),
+        ];
+        queue.push(...nextIds);
       }
 
       for (const step of steps) {
-        if (reachable.size > 0 && !reachable.has(step.id)) continue;
+        const stepId = step.id || step.component_id;
+        if (reachable.size > 0 && !reachable.has(stepId)) continue;
         const messages = step.messages || {};
         for (const variant of Object.values(messages)) {
           if (variant.channel === "email" && variant.body) {
