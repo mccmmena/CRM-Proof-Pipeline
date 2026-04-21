@@ -236,9 +236,9 @@ export default defineComponent({
     if (driveFiles.length > 0) {
       const blocks = [];
 
-      // Show iPhone light and dark as full-size images
-      const iphoneLight = driveFiles.find((f) => f.client === "iphone16_18" || (f.name || "").includes("iPhone 16 - iOS 18."));
-      const iphoneDark = driveFiles.find((f) => f.client === "iphone16_18_dm" || (f.name || "").includes("iPhone 16 - iOS 18 Dark"));
+      // Show Apple Mail desktop light and dark as full-size images
+      const iphoneLight = driveFiles.find((f) => f.client === "applemail16" || (f.name || "").includes("Apple Mail 16."));
+      const iphoneDark = driveFiles.find((f) => f.client === "applemail16_dm" || (f.name || "").includes("Apple Mail 16 Dark"));
 
       for (const f of [iphoneLight, iphoneDark].filter(Boolean)) {
         blocks.push({
