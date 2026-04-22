@@ -1,6 +1,6 @@
 schema: workflow/2022.04
 name: Slack Reply with Proof
-inactive: true
+inactive: false
 settings:
   error_notification: true
 triggers:
@@ -41,7 +41,7 @@ steps:
   runtime: nodejs20.x
   uses: "./code/entry.js"
 - namespace: reply_to_a_message_preview
-  disabled: true
+  disabled: false
   runtime: nodejs20.x
   uses: slack_v2-reply-to-a-message@0.2.0
   props:
@@ -54,7 +54,7 @@ steps:
     unfurl_links: true
     unfurl_media: true
 - namespace: reply_to_a_message_other
-  disabled: true
+  disabled: false
   runtime: nodejs20.x
   uses: slack_v2-reply-to-a-message@0.2.0
   props:
