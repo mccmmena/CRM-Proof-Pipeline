@@ -31,7 +31,7 @@ steps:
   props:
     google_drive:
       authProvisionId: apn_mnh5B9x
-    drive: "0ADYdvL51rFLjUk9PVA"
+    drive: 0ADYdvL51rFLjUk9PVA
     path: "{{steps.details.$return_value.date}}/{{steps.details.$return_value.communication}}"
 - namespace: list_files
   runtime: nodejs20.x
@@ -39,7 +39,7 @@ steps:
   props:
     google_drive:
       authProvisionId: apn_mnh5B9x
-    drive: "0ADYdvL51rFLjUk9PVA"
+    drive: 0ADYdvL51rFLjUk9PVA
     folderId: "{{steps.get_folder_id_for_path.$return_value}}"
 - namespace: code
   runtime: nodejs20.x
