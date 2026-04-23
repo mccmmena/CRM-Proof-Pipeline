@@ -6,6 +6,7 @@ settings:
   network: net_5Lnie3
 triggers:
 - id: hi_BpHkPLe
+- id: ti_0yTPezK
 steps:
 - namespace: braze_get_scheduled_messages
   runtime: nodejs20.x
