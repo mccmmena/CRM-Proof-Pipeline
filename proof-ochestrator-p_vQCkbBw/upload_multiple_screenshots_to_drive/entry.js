@@ -33,7 +33,8 @@ export default defineComponent({
         name: dateString,
         parentId: this.sharedDrive,
         excludeTrashed: true,
-        drive: this.sharedDrive
+        drive: this.sharedDrive,
+        includeItemsFromAllDrives: true,
       });
 
       if (dateFolder && dateFolder.length > 0) {
@@ -59,7 +60,8 @@ export default defineComponent({
         name: campaignName,
         parentId: dateFolderId,
         excludeTrashed: true,
-        drive: this.sharedDrive
+        drive: this.sharedDrive,
+        includeItemsFromAllDrives: true,
       });
 
       if (campaignFolder && campaignFolder.length > 0) {
