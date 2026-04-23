@@ -22,6 +22,7 @@ export default defineComponent({
       newsletter_key: config.newsletter_key,
       ai_subject: ai.ai_subject,
       ai_intro: ai.ai_intro,
+      ai_intro_html: ai.ai_intro_html || "",
     };
 
     await axios($, {

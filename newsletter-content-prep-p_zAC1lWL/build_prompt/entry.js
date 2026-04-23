@@ -11,7 +11,8 @@ Pick the best persona for these stories and give me their take for today's newsl
 Return it as JSON in the format:
 {
   "ai_subject": "email subject line, max 60 characters",
-  "ai_intro": "2-3 sentence opening paragraph for the newsletter",
+  "ai_intro": "2-3 sentence opening paragraph. Hyperlink story mentions using Slack mrkdwn link syntax: <article_url|anchor text>. Use the article_url from the story data.",
+  "ai_intro_html": "Identical wording to ai_intro, but use HTML links instead: <a href=\\"article_url\\">anchor text</a>. Use only inline HTML — no <div>, <p>, or block-level elements.",
   "ai_description": "one-line summary of today's edition"
 }`;
 

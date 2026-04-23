@@ -110,17 +110,18 @@ steps:
     sql:
       value: |-
         UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
-        SET AI_SUBJECT = :1, AI_INTRO = :2, AI_MODEL = :3,
-        AI_RAW_RESPONSE = PARSE_JSON(:4)
-        WHERE RUN_ID = :5
+        SET AI_SUBJECT = :1, AI_INTRO = :2, AI_INTRO_HTML = :3, AI_MODEL = :4,
+        AI_RAW_RESPONSE = PARSE_JSON(:5)
+        WHERE RUN_ID = :6
       query: |-
         UPDATE MCC_RAW.MARKETING_DEV.NEWSLETTER_RUNS
-        SET AI_SUBJECT = :1, AI_INTRO = :2, AI_MODEL = :3,
-        AI_RAW_RESPONSE = PARSE_JSON(:4)
-        WHERE RUN_ID = :5
+        SET AI_SUBJECT = :1, AI_INTRO = :2, AI_INTRO_HTML = :3, AI_MODEL = :4,
+        AI_RAW_RESPONSE = PARSE_JSON(:5)
+        WHERE RUN_ID = :6
       params:
       - "{{steps.parse_ghostwriter.$return_value.ai_subject}}"
       - "{{steps.parse_ghostwriter.$return_value.ai_intro}}"
+      - "{{steps.parse_ghostwriter.$return_value.ai_intro_html}}"
       - elvex
       - "{{JSON.stringify(steps.ghostwriter.$return_value)}}"
       - "{{steps.write_run_history.$return_value.run_id}}"
