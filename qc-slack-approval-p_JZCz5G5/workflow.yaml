@@ -27,24 +27,19 @@ steps:
   uses: "./details/entry.js"
 - namespace: get_folder_id_for_path
   runtime: nodejs20.x
-  uses: google_drive-get-folder-id-for-path@0.1.22
+  uses: "./get_folder_id_for_path/entry.js"
   props:
-    googleDrive:
+    google_drive:
       authProvisionId: apn_mnh5B9x
-    drive: My Drive
+    drive: "0ADYdvL51rFLjUk9PVA"
     path: "{{steps.details.$return_value.date}}/{{steps.details.$return_value.communication}}"
 - namespace: list_files
   runtime: nodejs20.x
-  uses: google_drive-list-files@0.2.2
-  _props_cursor: dyp_4MUdrkA4
+  uses: "./list_files/entry.js"
   props:
-    googleDrive:
+    google_drive:
       authProvisionId: apn_mnh5B9x
-    includeItemsFromAllDrives: true
-    drive:
-      __lv:
-        label: Proofs
-        value: 0ADYdvL51rFLjUk9PVA
+    drive: "0ADYdvL51rFLjUk9PVA"
     folderId: "{{steps.get_folder_id_for_path.$return_value}}"
 - namespace: code
   runtime: nodejs20.x
