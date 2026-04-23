@@ -13,13 +13,12 @@ export default defineComponent({
   async run({ steps, $ }) {
     const { newsletter_key } = steps.load_config.$return_value;
     const { run_id } = steps.write_run_history.$return_value;
-    const { ai_subject, ai_intro, ai_intro_html } = steps.parse_ghostwriter.$return_value;
+    const { ai_subject, ai_intro_html } = steps.parse_ghostwriter.$return_value;
 
     const item = {
       id: newsletter_key,
       ai_subject,
-      ai_intro,
-      ai_intro_html: ai_intro_html || "",
+      ai_intro: ai_intro_html || "",
       run_id,
       generated_at: new Date().toISOString(),
     };

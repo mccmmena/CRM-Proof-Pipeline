@@ -23,8 +23,7 @@ export default defineComponent({
   async run({ $ }) {
     const fallback = this.contentPrepResume || {};
     let aiSubject = fallback.ai_subject || "";
-    let aiIntro = fallback.ai_intro || "";
-    let aiIntroHtml = fallback.ai_intro_html || "";
+    const aiIntro = fallback.ai_intro || "";
 
     try {
       const resp = await axios($, {
@@ -35,13 +34,11 @@ export default defineComponent({
         },
       });
       aiSubject = resp?.item?.ai_subject || aiSubject;
-      aiIntro = resp?.item?.ai_intro || aiIntro;
-      aiIntroHtml = resp?.item?.ai_intro_html || aiIntroHtml;
     } catch (e) {
       console.warn("Could not fetch from crm_newsletters_content, using callback values:", e.message);
     }
 
     $.export("$summary", `AI content: subject=${aiSubject ? "yes" : "no"}, intro=${aiIntro ? "yes" : "no"}`);
-    return { ai_subject: aiSubject, ai_intro: aiIntro, ai_intro_html: aiIntroHtml };
+    return { ai_subject: aiSubject, ai_intro: aiIntro };
   },
 });

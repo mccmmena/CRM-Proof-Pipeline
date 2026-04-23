@@ -70,7 +70,7 @@ export default defineComponent({
             "Content-Type": "application/json",
           },
           data: {
-            items: [{ id: config.newsletter_key, ai_subject: "", ai_intro: "", ai_intro_html: "" }],
+            items: [{ id: config.newsletter_key, ai_subject: "", ai_intro: "" }],
           },
         });
         brazCleared = true;
