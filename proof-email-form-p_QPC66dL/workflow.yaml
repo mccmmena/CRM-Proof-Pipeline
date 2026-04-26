@@ -3,4 +3,51 @@ name: Proof Email Form
 settings:
   error_notification: true
   network: net_5Lnie3
-
+triggers:
+- id: dc_2Eu1J3j  # proof_email_form_http (sc_YNiwEdYp), customResponse:true
+steps:
+- namespace: load_newsletters
+  runtime: nodejs20.x
+  uses: snowflake-execute-sql-query@0.2.3
+  props:
+    snowflake:
+      authProvisionId: apn_yghdQYJ
+    sql:
+      value: |-
+        SELECT NEWSLETTER_KEY, DISPLAY_NAME, CANVAS_ID
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
+        WHERE ENABLED = TRUE AND CANVAS_ID IS NOT NULL
+        ORDER BY DISPLAY_NAME
+      query: |-
+        SELECT NEWSLETTER_KEY, DISPLAY_NAME, CANVAS_ID
+        FROM MCC_RAW.MARKETING_DEV.NEWSLETTER_CONFIG
+        WHERE ENABLED = TRUE AND CANVAS_ID IS NOT NULL
+        ORDER BY DISPLAY_NAME
+      params: []
+- namespace: serve_or_validate
+  runtime: nodejs20.x
+  uses: "./serve_or_validate/entry.js"
+- namespace: resolve_braze_details
+  runtime: nodejs20.x
+  uses: "./resolve_braze_details/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_1Khpe1W
+    canvasId: "{{steps.serve_or_validate.$return_value.canvas_id}}"
+- namespace: braze_test_send
+  runtime: nodejs20.x
+  uses: "./braze_test_send/entry.js"
+  props:
+    braze:
+      authProvisionId: apn_0WhgpWJ
+    recipientEmail: "{{steps.serve_or_validate.$return_value.recipient_email}}"
+    displayName: "{{steps.serve_or_validate.$return_value.display_name}}"
+    emailBody: "{{steps.resolve_braze_details.$return_value.email.body}}"
+    emailSubject: "{{steps.resolve_braze_details.$return_value.email.subject}}"
+    emailPreheader: "{{steps.resolve_braze_details.$return_value.email.preheader}}"
+- namespace: respond_confirmation
+  runtime: nodejs20.x
+  uses: "./respond_confirmation/entry.js"
+  props:
+    displayName: "{{steps.serve_or_validate.$return_value.display_name}}"
+    recipientEmail: "{{steps.serve_or_validate.$return_value.recipient_email}}"
