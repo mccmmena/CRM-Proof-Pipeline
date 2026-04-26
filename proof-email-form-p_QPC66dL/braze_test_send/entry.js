@@ -1,22 +1,26 @@
-// Send a one-off proof email via Braze /campaigns/trigger/send.
+// Send a one-off proof email via Braze.
 //
-// Uses an API-triggered "Proof Email Container" campaign in Braze whose
-// Liquid template injects body/subject/preheader from api_trigger_properties.
-// Recipient is targeted by email directly with prioritization ["unidentified"]
-// — no Braze user record is created.
+// Two-call flow:
+//   1) POST /users/track to upsert a user with external_id "proof-test-{hash}"
+//      and the requester's email as an attribute.
+//   2) POST /messages/send with external_user_ids:[that id] and the full
+//      rendered email inline in messages.email.body.
 //
-// The campaign in Braze should have Liquid like:
-//   Subject:   {{api_trigger_properties.${subject}}}
-//   Preheader: {{api_trigger_properties.${preheader}}}
-//   Body:      {{api_trigger_properties.${body}}}
+// Why two calls: /messages/send requires the recipient to already exist in
+// Braze and does not support direct email targeting. /campaigns/trigger/send
+// does support direct email but caps trigger_properties at ~50KB — newsletter
+// HTML routinely exceeds that ("'trigger_properties' is too large").
 //
-// Earlier attempts used /messages/send with recipients[] — that endpoint does
-// not support direct email targeting (only external_user_ids/user_aliases at
-// the top level), so requests failed with "Missing recipients".
+// The external_id is deterministic on the lowercased email, so repeat
+// requests reuse the same Braze user record. The "proof-test-" prefix makes
+// these test users easy to filter or delete later.
 
 import { axios } from "@pipedream/platform";
+import crypto from "crypto";
 
-const PROOF_CAMPAIGN_ID = "fc62d530-361a-4352-aba9-1589c793be48";
+const APP_ID = "3f5340d5-1868-4fc0-b783-b36dd6185ab6";
+const FROM_EMAIL = "test@content.mcclatchymedia.com";
+const FROM_NAME = "McClatchy Test";
 
 export default defineComponent({
   props: {
@@ -28,32 +32,54 @@ export default defineComponent({
     emailPreheader: { type: "string", optional: true },
   },
   async run({ $ }) {
-    const subject = `[PROOF] ${this.emailSubject || this.displayName}`;
-
-    const payload = {
-      campaign_id: PROOF_CAMPAIGN_ID,
-      trigger_properties: {
-        body: this.emailBody,
-        subject,
-        preheader: this.emailPreheader || "",
-      },
-      recipients: [
-        {
-          email: this.recipientEmail,
-          prioritization: ["unidentified"],
-        },
-      ],
+    const { instance_domain, region, api_key } = this.braze.$auth;
+    const baseURL = `https://${instance_domain}.braze.${region}`;
+    const headers = {
+      Authorization: `Bearer ${api_key}`,
+      "Content-Type": "application/json",
     };
 
-    const { instance_domain, region, api_key } = this.braze.$auth;
+    const emailHash = crypto
+      .createHash("sha256")
+      .update(this.recipientEmail.toLowerCase())
+      .digest("hex")
+      .slice(0, 16);
+    const externalUserId = `proof-test-${emailHash}`;
+
+    // 1) Upsert the user so /messages/send can target them.
+    await axios($, {
+      method: "POST",
+      url: `${baseURL}/users/track`,
+      headers,
+      data: {
+        attributes: [
+          {
+            external_id: externalUserId,
+            email: this.recipientEmail,
+            _update_existing_only: false,
+          },
+        ],
+      },
+    });
+
+    // 2) Send the rendered email inline.
+    const subject = `[PROOF] ${this.emailSubject || this.displayName}`;
+    const emailMessage = {
+      app_id: APP_ID,
+      subject,
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      body: this.emailBody,
+    };
+    if (this.emailPreheader) emailMessage.preheader = this.emailPreheader;
+
     const response = await axios($, {
       method: "POST",
-      url: `https://${instance_domain}.braze.${region}/campaigns/trigger/send`,
-      headers: {
-        Authorization: `Bearer ${api_key}`,
-        "Content-Type": "application/json",
+      url: `${baseURL}/messages/send`,
+      headers,
+      data: {
+        external_user_ids: [externalUserId],
+        messages: { email: emailMessage },
       },
-      data: payload,
     });
 
     $.export(
@@ -61,6 +87,6 @@ export default defineComponent({
       `Sent "${this.displayName}" to ${this.recipientEmail} — dispatch_id: ${response.dispatch_id || "N/A"}`
     );
 
-    return { dispatch_id: response.dispatch_id, campaign_id: PROOF_CAMPAIGN_ID };
+    return { dispatch_id: response.dispatch_id, external_user_id: externalUserId };
   },
 });
