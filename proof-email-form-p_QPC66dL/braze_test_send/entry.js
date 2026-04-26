@@ -1,22 +1,22 @@
-// Send a one-off proof email via Braze /messages/send.
+// Send a one-off proof email via Braze /campaigns/trigger/send.
 //
-// Recipient is identified by a deterministic external_user_id derived from the
-// requester's email (`proof-test-{sha8(email)}`). Combined with
-// `send_to_existing_only: false` and `attributes.email`, Braze creates the user
-// on the fly with that email and sends to it. Same email always maps to the
-// same external_user_id, so repeated requests reuse the same user record. The
-// `proof-test-` prefix makes these users easy to identify or clean up later.
+// Uses an API-triggered "Proof Email Container" campaign in Braze whose
+// Liquid template injects body/subject/preheader from api_trigger_properties.
+// Recipient is targeted by email directly with prioritization ["unidentified"]
+// — no Braze user record is created.
 //
-// Note: an earlier version used user_alias with send_to_existing_only:false,
-// which fails with "Missing recipients" — aliases must already exist; the
-// auto-create path only works with external_user_id.
+// The campaign in Braze should have Liquid like:
+//   Subject:   {{api_trigger_properties.${subject}}}
+//   Preheader: {{api_trigger_properties.${preheader}}}
+//   Body:      {{api_trigger_properties.${body}}}
+//
+// Earlier attempts used /messages/send with recipients[] — that endpoint does
+// not support direct email targeting (only external_user_ids/user_aliases at
+// the top level), so requests failed with "Missing recipients".
 
 import { axios } from "@pipedream/platform";
-import crypto from "crypto";
 
-const APP_ID = "3f5340d5-1868-4fc0-b783-b36dd6185ab6";
-const FROM_EMAIL = "test@content.mcclatchymedia.com";
-const FROM_NAME = "McClatchy Test";
+const PROOF_CAMPAIGN_ID = "fc62d530-361a-4352-aba9-1589c793be48";
 
 export default defineComponent({
   props: {
@@ -28,30 +28,19 @@ export default defineComponent({
     emailPreheader: { type: "string", optional: true },
   },
   async run({ $ }) {
-    const emailHash = crypto
-      .createHash("sha256")
-      .update(this.recipientEmail.toLowerCase())
-      .digest("hex")
-      .slice(0, 16);
-    const externalUserId = `proof-test-${emailHash}`;
-
     const subject = `[PROOF] ${this.emailSubject || this.displayName}`;
 
-    const emailMessage = {
-      app_id: APP_ID,
-      subject,
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      body: this.emailBody,
-    };
-    if (this.emailPreheader) emailMessage.preheader = this.emailPreheader;
-
     const payload = {
-      messages: { email: emailMessage },
+      campaign_id: PROOF_CAMPAIGN_ID,
+      trigger_properties: {
+        body: this.emailBody,
+        subject,
+        preheader: this.emailPreheader || "",
+      },
       recipients: [
         {
-          external_user_id: externalUserId,
-          attributes: { email: this.recipientEmail },
-          send_to_existing_only: false,
+          email: this.recipientEmail,
+          prioritization: ["unidentified"],
         },
       ],
     };
@@ -59,7 +48,7 @@ export default defineComponent({
     const { instance_domain, region, api_key } = this.braze.$auth;
     const response = await axios($, {
       method: "POST",
-      url: `https://${instance_domain}.braze.${region}/messages/send`,
+      url: `https://${instance_domain}.braze.${region}/campaigns/trigger/send`,
       headers: {
         Authorization: `Bearer ${api_key}`,
         "Content-Type": "application/json",
@@ -72,6 +61,6 @@ export default defineComponent({
       `Sent "${this.displayName}" to ${this.recipientEmail} — dispatch_id: ${response.dispatch_id || "N/A"}`
     );
 
-    return { dispatch_id: response.dispatch_id, external_user_id: externalUserId };
+    return { dispatch_id: response.dispatch_id, campaign_id: PROOF_CAMPAIGN_ID };
   },
 });
