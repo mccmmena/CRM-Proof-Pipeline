@@ -1,0 +1,6 @@
+schema: workflow/2022.04
+name: Proof Email Form
+settings:
+  error_notification: true
+  network: net_5Lnie3
+
