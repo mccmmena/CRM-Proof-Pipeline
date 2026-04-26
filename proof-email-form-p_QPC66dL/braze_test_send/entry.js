@@ -1,19 +1,10 @@
-// Send a one-off proof email via Braze.
+// Send a one-off proof email via Braze /messages/send.
 //
-// Two-call flow:
-//   1) POST /users/track to upsert a user with external_id "proof-test-{hash}"
-//      and the requester's email as an attribute.
-//   2) POST /messages/send with external_user_ids:[that id] and the full
-//      rendered email inline in messages.email.body.
-//
-// Why two calls: /messages/send requires the recipient to already exist in
-// Braze and does not support direct email targeting. /campaigns/trigger/send
-// does support direct email but caps trigger_properties at ~50KB — newsletter
-// HTML routinely exceeds that ("'trigger_properties' is too large").
-//
-// The external_id is deterministic on the lowercased email, so repeat
-// requests reuse the same Braze user record. The "proof-test-" prefix makes
-// these test users easy to filter or delete later.
+// Assumes the recipient already exists in our Braze environment with an
+// external_id equal to sha256(lowercased email). This is McClatchy's standard
+// user-id hashing scheme — same pattern used by braze-render's default test
+// user. Lookup is deterministic; no /users/track call needed (we don't have
+// permissions to that endpoint anyway).
 
 import { axios } from "@pipedream/platform";
 import crypto from "crypto";
@@ -32,37 +23,11 @@ export default defineComponent({
     emailPreheader: { type: "string", optional: true },
   },
   async run({ $ }) {
-    const { instance_domain, region, api_key } = this.braze.$auth;
-    const baseURL = `https://${instance_domain}.braze.${region}`;
-    const headers = {
-      Authorization: `Bearer ${api_key}`,
-      "Content-Type": "application/json",
-    };
-
-    const emailHash = crypto
+    const externalUserId = crypto
       .createHash("sha256")
       .update(this.recipientEmail.toLowerCase())
-      .digest("hex")
-      .slice(0, 16);
-    const externalUserId = `proof-test-${emailHash}`;
+      .digest("hex");
 
-    // 1) Upsert the user so /messages/send can target them.
-    await axios($, {
-      method: "POST",
-      url: `${baseURL}/users/track`,
-      headers,
-      data: {
-        attributes: [
-          {
-            external_id: externalUserId,
-            email: this.recipientEmail,
-            _update_existing_only: false,
-          },
-        ],
-      },
-    });
-
-    // 2) Send the rendered email inline.
     const subject = `[PROOF] ${this.emailSubject || this.displayName}`;
     const emailMessage = {
       app_id: APP_ID,
@@ -72,10 +37,14 @@ export default defineComponent({
     };
     if (this.emailPreheader) emailMessage.preheader = this.emailPreheader;
 
+    const { instance_domain, region, api_key } = this.braze.$auth;
     const response = await axios($, {
       method: "POST",
-      url: `${baseURL}/messages/send`,
-      headers,
+      url: `https://${instance_domain}.braze.${region}/messages/send`,
+      headers: {
+        Authorization: `Bearer ${api_key}`,
+        "Content-Type": "application/json",
+      },
       data: {
         external_user_ids: [externalUserId],
         messages: { email: emailMessage },
