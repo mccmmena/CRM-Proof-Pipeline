@@ -8,42 +8,41 @@ function escapeHtml(s) {
 }
 
 function renderForm(rows, { error, value } = {}) {
-  const options = rows
-    .map((r) => {
-      const selected = value?.newsletter_key === r.NEWSLETTER_KEY ? " selected" : "";
-      return `<option value="${escapeHtml(r.NEWSLETTER_KEY)}"${selected}>${escapeHtml(r.DISPLAY_NAME)}</option>`;
-    })
+  const buttons = rows
+    .map(
+      (r) =>
+        `<button type="submit" name="newsletter_key" value="${escapeHtml(r.NEWSLETTER_KEY)}">${escapeHtml(r.DISPLAY_NAME)}</button>`
+    )
     .join("\n      ");
   const errorHtml = error ? `<p class="err">${escapeHtml(error)}</p>` : "";
   const emailValue = escapeHtml(value?.email || "");
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>Email me a newsletter proof</title>
 <style>
-  body{font:14px system-ui,-apple-system,sans-serif;max-width:520px;margin:60px auto;padding:0 20px;color:#111}
+  body{font:14px system-ui,-apple-system,sans-serif;max-width:560px;margin:60px auto;padding:0 20px;color:#111}
   h1{font-size:22px;margin-bottom:4px}
   p.sub{color:#666;margin-top:0}
   label{display:block;margin-top:18px;font-weight:500}
-  select,input,button{font:inherit;padding:10px 12px;width:100%;margin-top:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px}
-  button{margin-top:24px;cursor:pointer;background:#111;color:#fff;border:0}
-  button:hover{background:#333}
+  input{font:inherit;padding:10px 12px;width:100%;margin-top:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+  .buttons button{font:inherit;padding:14px 12px;cursor:pointer;background:#111;color:#fff;border:0;border-radius:4px;text-align:left}
+  .buttons button:hover{background:#06c}
   .err{background:#fee;border:1px solid #f99;padding:10px;border-radius:4px;color:#900}
+  .hint{color:#666;font-size:13px;margin-top:24px}
 </style></head>
 <body>
   <h1>Email me a newsletter proof</h1>
-  <p class="sub">Pick a newsletter and we'll send the live rendered version to your inbox.</p>
+  <p class="sub">Enter your email, then click a newsletter to send the live rendered version to your inbox.</p>
   ${errorHtml}
   <form method="POST">
-    <label>Newsletter
-      <select name="newsletter_key" required>
-        <option value="">Select a newsletter…</option>
-        ${options}
-      </select>
-    </label>
     <label>Your email
       <input type="email" name="email" required value="${emailValue}" placeholder="you@mcclatchy.com">
     </label>
-    <button type="submit">Send proof to my inbox</button>
+    <div class="buttons">
+      ${buttons}
+    </div>
   </form>
+  <p class="hint">Subjects arrive prefixed with <code>[PROOF]</code>. Allow up to a minute for delivery.</p>
 </body></html>`;
 }
 

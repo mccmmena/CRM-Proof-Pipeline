@@ -1,10 +1,15 @@
 // Send a one-off proof email via Braze /messages/send.
 //
-// Recipient is overridden via the `recipients` array using a user_alias plus
-// `attributes.email` and `send_to_existing_only: false`. This routes a real
-// Braze send to an arbitrary email address without polluting the
-// external_user_id namespace. Aliased users can be located later in Braze
-// by the alias_label "proof_test".
+// Recipient is identified by a deterministic external_user_id derived from the
+// requester's email (`proof-test-{sha8(email)}`). Combined with
+// `send_to_existing_only: false` and `attributes.email`, Braze creates the user
+// on the fly with that email and sends to it. Same email always maps to the
+// same external_user_id, so repeated requests reuse the same user record. The
+// `proof-test-` prefix makes these users easy to identify or clean up later.
+//
+// Note: an earlier version used user_alias with send_to_existing_only:false,
+// which fails with "Missing recipients" — aliases must already exist; the
+// auto-create path only works with external_user_id.
 
 import { axios } from "@pipedream/platform";
 import crypto from "crypto";
@@ -12,7 +17,6 @@ import crypto from "crypto";
 const APP_ID = "3f5340d5-1868-4fc0-b783-b36dd6185ab6";
 const FROM_EMAIL = "test@content.mcclatchymedia.com";
 const FROM_NAME = "McClatchy Test";
-const ALIAS_LABEL = "proof_test";
 
 export default defineComponent({
   props: {
@@ -24,11 +28,12 @@ export default defineComponent({
     emailPreheader: { type: "string", optional: true },
   },
   async run({ $ }) {
-    const aliasName = `proof-test-${crypto
+    const emailHash = crypto
       .createHash("sha256")
       .update(this.recipientEmail.toLowerCase())
       .digest("hex")
-      .slice(0, 16)}`;
+      .slice(0, 16);
+    const externalUserId = `proof-test-${emailHash}`;
 
     const subject = `[PROOF] ${this.emailSubject || this.displayName}`;
 
@@ -44,7 +49,7 @@ export default defineComponent({
       messages: { email: emailMessage },
       recipients: [
         {
-          user_alias: { alias_name: aliasName, alias_label: ALIAS_LABEL },
+          external_user_id: externalUserId,
           attributes: { email: this.recipientEmail },
           send_to_existing_only: false,
         },
@@ -67,6 +72,6 @@ export default defineComponent({
       `Sent "${this.displayName}" to ${this.recipientEmail} — dispatch_id: ${response.dispatch_id || "N/A"}`
     );
 
-    return { dispatch_id: response.dispatch_id, alias_name: aliasName };
+    return { dispatch_id: response.dispatch_id, external_user_id: externalUserId };
   },
 });

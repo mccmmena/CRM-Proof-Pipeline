@@ -4,7 +4,6 @@ settings:
   error_notification: true
   network: net_5Lnie3
 triggers:
-- id: dc_2Eu1J3j
 - id: hi_2VH6P1x
 steps:
 - namespace: load_newsletters
