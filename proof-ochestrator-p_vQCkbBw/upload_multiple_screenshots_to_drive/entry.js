@@ -97,6 +97,15 @@ export default defineComponent({
         const fileName = `${displayName || client}.${ext}`;
 
         const boundary = "proof_boundary";
+        const body = Buffer.concat([
+          Buffer.from(
+            `--${boundary}\r\nContent-Type: application/json\r\n\r\n` +
+            JSON.stringify({ name: fileName, parents: [campaignFolder.id] }) +
+            `\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`
+          ),
+          Buffer.from(imgData),
+          Buffer.from(`\r\n--${boundary}--`),
+        ]);
         const uploaded = await axios($, {
           method: "POST",
           url: `${uploadBase}/files?uploadType=multipart${supportsAllDrives}`,
@@ -104,15 +113,7 @@ export default defineComponent({
             Authorization: auth,
             "Content-Type": `multipart/related; boundary=${boundary}`,
           },
-          data: [
-            `--${boundary}\r\n`,
-            `Content-Type: application/json\r\n\r\n`,
-            `${JSON.stringify({ name: fileName, parents: [campaignFolder.id] })}\r\n`,
-            `--${boundary}\r\n`,
-            `Content-Type: ${mimeType}\r\n\r\n`,
-            Buffer.from(imgData),
-            `\r\n--${boundary}--`,
-          ].join(""),
+          data: body,
         });
 
         try {
