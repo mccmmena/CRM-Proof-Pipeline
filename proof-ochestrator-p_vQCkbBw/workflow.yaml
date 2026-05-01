@@ -181,3 +181,4 @@ steps:
     decision: "{{steps.extract_decision.$return_value.decision}}"
     channel: "{{steps.suspend_and_post_proof.$return_value?.channel}}"
     threadTs: "{{steps.suspend_and_post_proof.$return_value?.ts}}"
+
